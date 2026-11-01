@@ -1,0 +1,132 @@
+.header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    width: calc(100% - 24px);
+    max-width: 720px;
+    height: 48px;
+    margin: 0 auto;
+    padding: 0 12px 0 4px;
+    border-radius: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.backButton {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--icon);
+    cursor: pointer;
+}
+
+.backButton:active {
+    background: var(--surface);
+}
+
+@media (max-width: 768px) {
+    .header {
+        top: 0;
+        width: 100%;
+        padding-left: 4px;
+        gap: 6px;
+    }
+
+    .backButton {
+        display: flex;
+    }
+}
+
+.name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+}
+
+.status {
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--text-muted);
+}
+
+.statusActive {
+    color: var(--accent);
+}
+
+.name.nameDisabled {
+    color: var(--muted-icon);
+    text-decoration: line-through;
+}
+
+.name.nameDeleted {
+    color: var(--text-muted);
+}
+
+.peer {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.peerText {
+    min-width: 0;
+}
+
+.peerText .name,
+.peerText .status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--icon);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.action svg {
+    width: 24px;
+    height: 24px;
+}
+
+.action:hover {
+    background: var(--surface);
+    color: var(--text);
+}

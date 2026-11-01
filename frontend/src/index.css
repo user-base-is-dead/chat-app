@@ -1,0 +1,102 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+:root {
+    color-scheme: light;
+    --doodle: url('./assets/doodle-pattern-light.svg');
+    --bg: #D8DAE0;
+    --bg-gradient: var(--bg);
+    --panel: #FFFFFF;
+    --glass: rgba(255, 255, 255, 0.94);
+    --surface: #F1F1F4;
+    --surface-strong: #E8E8EC;
+    --border: #E3E3E7;
+    --border-strong: #CACACF;
+    --text: #000000;
+    --text-muted: #707579;
+    --icon: #707579;
+    --muted-icon: #A8ADB2;
+    --muted-badge: #C4C9CC;
+    --accent: #8774E1;
+    --accent-soft: rgba(135, 116, 225, 0.12);
+    --accent-gradient: var(--accent);
+    --on-accent: #FFFFFF;
+    --bubble-mine: #E6E1FF;
+    --bubble-other: #FFFFFF;
+    --bubble-other-text: #000000;
+    --bubble-other-muted: #707579;
+    --bubble-mine-text: #000000;
+    --bubble-mine-muted: #6F63B8;
+    --danger: #E5484D;
+    --icon-blue: #3E9CF0;
+    --icon-grey: #7D8B99;
+    --icon-orange: #F0913E;
+    --success: #2F9E5B;
+    --danger-soft: rgba(229, 72, 77, 0.12);
+    --shadow: 0 4px 18px rgba(20, 20, 30, 0.12);
+    --shadow-small: 0 1px 2px rgba(20, 20, 30, 0.16);
+    --scrollbar: rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --doodle: url('./assets/doodle-pattern.svg');
+    --bg: #0F0F0F;
+    --bg-gradient: var(--bg);
+    --panel: #212121;
+    --glass: rgba(33, 33, 33, 0.94);
+    --surface: #2C2C2C;
+    --surface-strong: #2F2F2F;
+    --border: #2F2F2F;
+    --border-strong: #3A3A3A;
+    --text: #FFFFFF;
+    --text-muted: #AAAAAA;
+    --icon: #AAAAAA;
+    --muted-icon: #707579;
+    --muted-badge: #707579;
+    --accent: #8774E1;
+    --accent-soft: rgba(135, 116, 225, 0.16);
+    --accent-gradient: var(--accent);
+    --on-accent: #FFFFFF;
+    --bubble-mine: #766AC8;
+    --bubble-other: #212121;
+    --bubble-other-text: #FFFFFF;
+    --bubble-other-muted: #AAAAAA;
+    --bubble-mine-text: #FFFFFF;
+    --bubble-mine-muted: #D8D2F5;
+    --danger: #F2555A;
+    --icon-blue: #3E9CF0;
+    --icon-grey: #7D8B99;
+    --icon-orange: #F0913E;
+    --success: #5CC85C;
+    --danger-soft: rgba(242, 85, 90, 0.16);
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    --shadow-small: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Noto Color Emoji', sans-serif;
+    font-weight: 450;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+img, svg, video, audio {
+    -webkit-user-drag: none;
+}
+
+input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+button, input, textarea {
+    font-family: inherit;
+    font-weight: inherit;
+}

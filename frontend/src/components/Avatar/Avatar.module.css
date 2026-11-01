@@ -1,0 +1,14 @@
+.avatar {
+    flex-shrink: 0;
+    border-radius: 50%;
+    color: #ffffff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.disabled {
+    background: var(--surface-strong);
+    color: var(--muted-icon);
+}

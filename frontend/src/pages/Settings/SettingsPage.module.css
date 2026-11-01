@@ -1,0 +1,361 @@
+.page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 16px 12px 8px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.hero:hover {
+    background: var(--surface);
+}
+
+.hero > :first-child {
+    margin-bottom: 10px;
+}
+
+.heroName {
+    max-width: 100%;
+    font-size: 20px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.heroStatus {
+    font-size: 14px;
+    color: var(--accent);
+}
+
+.profileHint {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.group {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    border-radius: 16px;
+    background: var(--surface);
+}
+
+.groupTitle {
+    padding: 6px 10px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.themes {
+    display: flex;
+    gap: 6px;
+    padding: 0 4px 4px;
+}
+
+.themeOption {
+    flex: 1;
+    height: 38px;
+    border: 1px solid var(--border-strong);
+    border-radius: 19px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.themeOption:hover {
+    background: var(--surface-strong);
+}
+
+.themeActive,
+.themeActive:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.row {
+    width: 100%;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.row:hover {
+    background: var(--surface-strong);
+}
+
+.icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    color: var(--on-accent);
+}
+
+.icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.iconBlue {
+    background: var(--icon-blue);
+}
+
+.iconPurple {
+    background: var(--accent);
+}
+
+.iconGrey {
+    background: var(--icon-grey);
+}
+
+.iconOrange {
+    background: var(--icon-orange);
+}
+
+.iconRed {
+    background: var(--danger);
+}
+
+.rowText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rowLabel {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rowHint {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.chevron {
+    display: flex;
+    color: var(--text-muted);
+}
+
+.logout {
+    color: var(--danger);
+}
+
+.subHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.back {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--icon);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.back:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.subTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.profileHero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0 4px;
+}
+
+.idChip {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.idChip:hover {
+    color: var(--accent);
+    border-color: var(--accent-soft);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.counter {
+    margin-top: -6px;
+    align-self: flex-end;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.error,
+.success {
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.success {
+    color: var(--success);
+}
+
+.primary,
+.dangerButton {
+    height: 48px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.1s, opacity 0.2s;
+}
+
+.primary {
+    color: var(--on-accent);
+    background: var(--accent-gradient);
+}
+
+.dangerButton {
+    background: var(--danger);
+}
+
+.primary:hover,
+.dangerButton:hover {
+    filter: brightness(1.06);
+}
+
+.primary:active,
+.dangerButton:active {
+    transform: scale(0.97);
+}
+
+.primary:disabled,
+.dangerButton:disabled {
+    opacity: 0.5;
+    cursor: default;
+    box-shadow: none;
+}
+
+.option {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: var(--surface);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.option:hover {
+    background: var(--surface-strong);
+}
+
+.optionActive,
+.optionActive:hover {
+    border-color: var(--accent);
+    background: var(--panel);
+}
+
+.optionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.dangerText {
+    color: var(--danger);
+}
+
+.optionText {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.cancel {
+    height: 40px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    font-size: 15px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.cancel:hover {
+    background: var(--surface);
+    color: var(--text);
+}

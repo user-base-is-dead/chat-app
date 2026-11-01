@@ -1,0 +1,10 @@
+function UnmuteIcon() {
+    return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 16.5V11C6 7.7 8.7 5 12 5C15.3 5 18 7.7 18 11V16.5H6Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M10 19.5C10.4 20.1 11.2 20.5 12 20.5C12.8 20.5 13.6 20.1 14 19.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+    )
+}
+
+export default UnmuteIcon

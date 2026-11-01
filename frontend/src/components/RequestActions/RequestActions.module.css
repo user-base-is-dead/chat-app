@@ -1,0 +1,63 @@
+.wrap {
+    width: calc(100% - 24px);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 12px;
+    border-radius: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .wrap {
+        width: 100%;
+        margin-bottom: 6px;
+    }
+}
+
+.text {
+    margin: 0 0 10px;
+    font-size: 14px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.delete, .accept {
+    flex: 1;
+    height: 40px;
+    border: none;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.2s, background 0.2s, transform 0.1s;
+}
+
+.delete {
+    background: var(--surface);
+    color: var(--danger);
+}
+
+.delete:hover {
+    background: var(--danger-soft);
+}
+
+.accept {
+    background: var(--accent-gradient);
+    color: var(--on-accent);
+}
+
+.accept:hover {
+    filter: brightness(1.08);
+}
+
+.delete:active, .accept:active {
+    transform: scale(0.97);
+}

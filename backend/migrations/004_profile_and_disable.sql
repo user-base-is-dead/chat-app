@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN bio TEXT NOT NULL DEFAULT '',
+    ADD COLUMN disabled_at TIMESTAMPTZ;

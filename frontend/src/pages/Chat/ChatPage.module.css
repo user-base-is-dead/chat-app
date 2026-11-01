@@ -1,0 +1,160 @@
+.layout {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    gap: 12px;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--doodle) 0 0 / 320px repeat, var(--bg-gradient);
+}
+
+.sidebarArea {
+    width: 380px;
+    flex-shrink: 0;
+    display: flex;
+    margin: 24px 0 24px 24px;
+    animation: fromLeft 0.55s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.chat {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    animation: fromRight 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) 0.1s backwards;
+}
+
+@keyframes fromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-40px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes fromRight {
+    from {
+        opacity: 0;
+        transform: translateX(40px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebarArea, .chat {
+        animation: none;
+    }
+}
+
+.chatInner {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 24px;
+    --header-top: 24px;
+    --header-space: 84px;
+}
+
+@media (max-width: 1000px) {
+    .sidebarArea {
+        width: 320px;
+    }
+}
+
+@media (max-width: 768px) {
+    .layout {
+        gap: 0;
+    }
+
+    .sidebarArea {
+        width: 100%;
+        margin: 0;
+    }
+
+    .chatInner {
+        padding: 0;
+        --header-top: 0px;
+        --header-space: 60px;
+    }
+
+    .chat {
+        display: none;
+        padding: 8px;
+    }
+
+    .chatOpen .sidebarArea {
+        display: none;
+    }
+
+    .chatOpen .chat {
+        display: flex;
+    }
+}
+
+.infoArea {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    bottom: 24px;
+    z-index: 5;
+    width: 360px;
+    display: flex;
+    transform: translateX(calc(100% + 24px));
+    visibility: hidden;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1), visibility 0s 0.25s;
+}
+
+.infoShown {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1), visibility 0s;
+}
+
+@media (min-width: 1201px) {
+    .chat {
+        transition: padding-right 0.25s cubic-bezier(0.4, 0, 1, 1);
+    }
+
+    .infoOpen .chat {
+        padding-right: 384px;
+        transition: padding-right 0.3s cubic-bezier(0, 0, 0.2, 1);
+    }
+}
+
+@media (max-width: 1200px) {
+    .infoShown {
+        box-shadow: var(--shadow);
+        border-radius: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .infoArea {
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        transform: translateX(100%);
+    }
+
+    .infoShown {
+        transform: translateX(0);
+        border-radius: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .infoArea,
+    .infoShown,
+    .chat {
+        transition: none;
+    }
+}

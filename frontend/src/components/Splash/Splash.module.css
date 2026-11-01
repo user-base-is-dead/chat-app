@@ -1,0 +1,20 @@
+.splash {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: var(--doodle) 0 0 / 320px repeat, var(--bg-gradient);
+}
+
+.logo {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+}
+
+.spinner {
+    color: var(--accent);
+}

@@ -1,0 +1,156 @@
+.bubble, .bubbleMine {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    max-width: min(480px, 80%);
+    padding: 5px 8px 6px 9px;
+    border-radius: 15px;
+    background: var(--bubble-other);
+    box-shadow: var(--shadow-small);
+    align-self: flex-start;
+}
+
+.bubbleMine {
+    background: var(--bubble-mine);
+    align-self: flex-end;
+}
+
+.groupStart {
+    margin-top: 6px;
+}
+
+.withTail.bubble {
+    border-bottom-left-radius: 0;
+}
+
+.withTail.bubbleMine {
+    border-bottom-right-radius: 0;
+}
+
+.withTail::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    width: 9px;
+    height: 12px;
+    background: inherit;
+}
+
+.withTail.bubble::before {
+    left: -8.5px;
+    -webkit-mask: radial-gradient(circle at 0 0, transparent 8.5px, #000 9px);
+    mask: radial-gradient(circle at 0 0, transparent 8.5px, #000 9px);
+}
+
+.withTail.bubbleMine::before {
+    right: -8.5px;
+    -webkit-mask: radial-gradient(circle at 100% 0, transparent 8.5px, #000 9px);
+    mask: radial-gradient(circle at 100% 0, transparent 8.5px, #000 9px);
+}
+
+.text {
+    -webkit-user-select: text;
+    user-select: text;
+    font-size: 16px;
+    line-height: 1.3125;
+    color: var(--bubble-other-text);
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    transform: translateY(1px);
+}
+
+.time {
+    font-size: 12px;
+    line-height: 1;
+    color: var(--bubble-other-muted);
+}
+
+.tick {
+    display: flex;
+    justify-content: center;
+    width: 18px;
+    color: var(--accent);
+}
+
+.sending svg {
+    width: 13px;
+    height: 13px;
+}
+
+.failed {
+    color: var(--danger);
+}
+
+.bubbleMine .text {
+    color: var(--bubble-mine-text);
+}
+
+.bubbleMine .time,
+.bubbleMine .tick {
+    color: var(--bubble-mine-muted);
+}
+
+.bubbleMine .failed {
+    color: var(--danger);
+}
+
+.focused {
+    animation: flash 2s ease-out;
+}
+
+@keyframes flash {
+    0%,
+    40% {
+        box-shadow: 0 0 0 3px var(--accent), var(--shadow-small);
+    }
+    100% {
+        box-shadow: 0 0 0 3px transparent, var(--shadow-small);
+    }
+}
+
+.leaving {
+    overflow: hidden;
+    pointer-events: none;
+    animation: vanish 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes vanish {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        height: var(--height);
+    }
+    45% {
+        opacity: 0;
+        transform: scale(0.82);
+        height: var(--height);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.82);
+        height: 0;
+        margin-top: -2px;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .focused {
+        animation: none;
+        box-shadow: 0 0 0 3px var(--accent), var(--shadow-small);
+    }
+
+    .leaving {
+        animation: none;
+        display: none;
+    }
+}
