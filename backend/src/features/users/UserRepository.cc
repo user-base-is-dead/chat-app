@@ -41,7 +41,8 @@ drogon::Task<std::optional<User>> UserRepository::create(int64_t id,
                                                          std::string passwordHash)
 {
     const auto result = co_await core::database::client()->execSqlCoro(
-        std::string("INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, $2, $3, $4) "
+        std::string("INSERT INTO users (id, username, display_name, password_hash) "
+                    "SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT 1 FROM rooms WHERE lower(username) = lower($2)) "
                     "ON CONFLICT (lower(username)) DO NOTHING RETURNING ") +
             kUserColumns,
         id,
@@ -129,6 +130,7 @@ drogon::Task<std::optional<User>> UserRepository::updateProfile(int64_t id,
         const auto result = co_await core::database::client()->execSqlCoro(
             std::string("UPDATE users SET username = $2, display_name = $3, bio = $4 WHERE id = $1 "
                         "AND NOT EXISTS (SELECT 1 FROM users WHERE lower(username) = lower($2) AND id <> $1) "
+                        "AND NOT EXISTS (SELECT 1 FROM rooms WHERE lower(username) = lower($2)) "
                         "RETURNING ") +
                 kUserColumns,
             id,
@@ -165,8 +167,25 @@ drogon::Task<> UserRepository::deleteAccount(int64_t id)
         "DELETE FROM chats c WHERE c.id IN (SELECT chat_id FROM dm_pairs WHERE user_low = $1 OR user_high = $1) "
         "AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.chat_id = c.id)",
         id);
+    co_await transaction->execSqlCoro(
+        "UPDATE chat_members cm SET role = 'owner' FROM ("
+        "SELECT DISTINCT ON (o.chat_id) m.chat_id, m.user_id FROM chat_members o "
+        "JOIN rooms r ON r.chat_id = o.chat_id "
+        "JOIN chat_members m ON m.chat_id = o.chat_id AND m.user_id <> $1 AND m.status = 'active' "
+        "WHERE o.user_id = $1 AND o.role = 'owner' "
+        "ORDER BY o.chat_id, m.role = 'admin' DESC, m.joined_at, m.user_id) heir "
+        "WHERE cm.chat_id = heir.chat_id AND cm.user_id = heir.user_id",
+        id);
+    co_await transaction->execSqlCoro(
+        "DELETE FROM chats c WHERE c.id IN (SELECT r.chat_id FROM rooms r "
+        "JOIN chat_members o ON o.chat_id = r.chat_id AND o.user_id = $1 AND o.role = 'owner' "
+        "WHERE NOT EXISTS (SELECT 1 FROM chat_members m WHERE m.chat_id = r.chat_id AND m.user_id <> $1 AND m.status = 'active'))",
+        id);
+    co_await transaction->execSqlCoro(
+        "DELETE FROM chat_members cm USING rooms r WHERE r.chat_id = cm.chat_id AND cm.user_id = $1", id);
     co_await transaction->execSqlCoro("DELETE FROM devices WHERE user_id = $1", id);
-    co_await transaction->execSqlCoro("DELETE FROM media WHERE owner_id = $1", id);
+    co_await transaction->execSqlCoro(
+        "DELETE FROM media m WHERE m.owner_id = $1 AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.photo_id = m.id)", id);
     co_await transaction->execSqlCoro(
         "UPDATE users SET username = 'deleted_' || id, display_name = '', bio = '', password_hash = '', "
         "disabled_at = NULL, deleted_at = now() WHERE id = $1",

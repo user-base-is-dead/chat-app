@@ -1,21 +1,14 @@
 import styles from './Avatar.module.css'
 import DisabledUserIcon from '../Icons/DisabledUserIcon'
 import DeletedUserIcon from '../Icons/DeletedUserIcon'
+import { chromaFor } from '../../utils/chroma'
 
-const colors = ['#ff5252', '#ff9800', '#7c4dff', '#26a69a', '#2196f3', '#ec407a', '#43a047']
-
-function getColor(name) {
-    let sum = 0
-    for (const char of name) sum += char.charCodeAt(0)
-    return colors[sum % colors.length]
-}
-
-function Avatar({ name, size = 54, disabled, deleted }) {
-    const color = getColor(name)
+function Avatar({ name, photo, size = 54, disabled, deleted, morphTarget }) {
+    const marks = { 'data-avatar': '', 'data-morph-target': morphTarget ? '' : undefined }
 
     if (deleted) {
         return (
-            <div className={`${styles.avatar} ${styles.disabled}`} style={{ width: size, height: size }} aria-label="Deleted account">
+            <div className={`${styles.avatar} ${styles.disabled}`} style={{ width: size, height: size }} aria-label="Deleted account" {...marks}>
                 <DeletedUserIcon />
             </div>
         )
@@ -23,7 +16,7 @@ function Avatar({ name, size = 54, disabled, deleted }) {
 
     if (disabled) {
         return (
-            <div className={`${styles.avatar} ${styles.disabled}`} style={{ width: size, height: size }} aria-label="Disabled account">
+            <div className={`${styles.avatar} ${styles.disabled}`} style={{ width: size, height: size }} aria-label="Disabled account" {...marks}>
                 <DisabledUserIcon />
             </div>
         )
@@ -32,9 +25,10 @@ function Avatar({ name, size = 54, disabled, deleted }) {
     return (
         <div
             className={styles.avatar}
-            style={{ width: size, height: size, fontSize: size * 0.4, background: color }}
+            style={{ width: size, height: size, fontSize: size * 0.42, background: chromaFor(name) }}
+            {...marks}
         >
-            {name[0]}
+            {photo ? <img src={photo} alt="" draggable="false" /> : name[0]}
         </div>
     )
 }

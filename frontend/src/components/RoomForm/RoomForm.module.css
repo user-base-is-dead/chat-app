@@ -1,0 +1,149 @@
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.photo {
+    position: relative;
+    align-self: center;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.25s var(--ease-spring);
+}
+
+.photo:active {
+    transform: scale(0.94);
+}
+
+.file {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.empty {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.empty svg {
+    width: 34px;
+    height: 34px;
+}
+
+.busy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--accent);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    padding-left: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.input,
+.area {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.input:focus,
+.area:focus {
+    border-color: var(--accent);
+    background: var(--panel);
+}
+
+.types {
+    position: relative;
+    display: flex;
+    padding: 4px;
+    border-radius: var(--radius-control);
+    background: var(--surface);
+}
+
+.slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 12px;
+    background: var(--accent);
+    transition: transform 0.35s var(--ease-spring);
+}
+
+.sliderRight {
+    transform: translateX(100%);
+}
+
+.type {
+    position: relative;
+    flex: 1;
+    height: 38px;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.typeActive {
+    color: var(--on-accent);
+}
+
+.hint {
+    margin: -6px 4px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.error {
+    margin: -6px 0 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .slider,
+    .photo {
+        transition: none;
+    }
+}

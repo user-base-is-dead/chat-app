@@ -5,6 +5,7 @@
 #include "core/text/Text.h"
 #include "features/chats/ChatService.h"
 #include "features/realtime/Hub.h"
+#include "features/rooms/RoomService.h"
 #include "features/users/Username.h"
 
 namespace features::users
@@ -42,6 +43,7 @@ drogon::Task<User> UserService::updateProfile(int64_t userId,
     auto user = co_await users_.updateProfile(userId, username, displayName, bio);
     if (!user)
         throw ApiError(drogon::k409Conflict, "username_taken", "This username is already taken");
+    co_await chats::notifyPeersChanged(userId);
     co_return *user;
 }
 
@@ -73,8 +75,11 @@ drogon::Task<> UserService::deleteAccount(int64_t userId, std::string password)
 {
     co_await requirePassword(userId, password);
     const auto links = co_await chats::ChatRepository().dmsOf(userId);
+    const auto rooms = co_await rooms::RoomRepository().roomsOf(userId);
     co_await users_.deleteAccount(userId);
     chats::notifyChatsChanged(links);
+    for (const auto chatId : rooms)
+        co_await rooms::notifyRoomChanged(chatId);
     realtime::hub().disconnect(userId);
 }
 

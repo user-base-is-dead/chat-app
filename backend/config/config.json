@@ -27,6 +27,7 @@
     "app": {
         "number_of_threads": 0,
         "upload_path": "build/uploads",
+        "client_max_body_size": "6M",
         "log": {
             "log_level": "INFO"
         }

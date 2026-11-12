@@ -16,6 +16,7 @@ import DeleteIcon from '../Icons/DeleteIcon'
 import ResendIcon from '../Icons/ResendIcon'
 import CancelIcon from '../Icons/CancelIcon'
 import ContextMenu from '../ContextMenu/ContextMenu'
+import Avatar from '../Avatar/Avatar'
 
 const statusIcons = {
     sending: ClockIcon,
@@ -33,7 +34,7 @@ function StatusIcon({ status }) {
     )
 }
 
-function MessageBubble({ message, focused, groupStart, groupEnd, onResend, onDelete }) {
+function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
     const bubbleRef = useRef(null)
 
@@ -44,10 +45,13 @@ function MessageBubble({ message, focused, groupStart, groupEnd, onResend, onDel
     const classes = [
         message.mine ? styles.bubbleMine : styles.bubble,
         groupStart && styles.groupStart,
-        groupEnd && styles.withTail,
+        groupEnd && styles.groupEnd,
         message.leaving && styles.leaving,
         focused && styles.focused,
+        showSender && styles.indented,
     ].filter(Boolean).join(' ')
+
+    const senderName = message.senderName || 'Deleted Account'
 
     const deleteItem = { label: 'Delete', Icon: DeleteIcon, danger: true, onClick: onDelete }
 
@@ -73,7 +77,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, onResend, onDel
         ],
     }
 
-    const receivedItems = menuItems.sent.filter((item) => item.label !== 'Edit')
+    const receivedItems = menuItems.sent.filter((item) => item.label !== 'Edit' && (canDeleteOthers || item.label !== 'Delete'))
 
     const items = message.mine ? menuItems[message.status] || menuItems.sent : receivedItems
 
@@ -84,11 +88,18 @@ function MessageBubble({ message, focused, groupStart, groupEnd, onResend, onDel
 
     return (
         <div className={classes} ref={bubbleRef} data-message-id={message.id} onContextMenu={openMenu}>
+            {showSender && firstOfSender && <span className={styles.sender}>{senderName}</span>}
+            {showSender && groupEnd && <span className={styles.senderAvatar}><Avatar name={senderName} size={32} /></span>}
             <span className={styles.text}>{message.text}</span>
             <span className={styles.meta}>
                 <span className={styles.time}>{message.time}</span>
-                {message.mine && <StatusIcon status={message.status} />}
+                {message.mine && (!hideTicks || message.status === 'sending' || message.status === 'failed') && <StatusIcon status={message.status} />}
             </span>
+            {groupEnd && (
+                <svg className={styles.tail} width="12" height="16" viewBox="0 0 12 16" aria-hidden="true">
+                    <path className={styles.tailFill} d="M10.5 0C10.5 6 7.5 10.5 2 13.2C0.6 13.9 1 15.5 2.6 15.5H12V0Z" />
+                </svg>
+            )}
             {menu && (
                 <ContextMenu
                     x={menu.x}

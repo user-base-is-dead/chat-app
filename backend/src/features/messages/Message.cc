@@ -4,6 +4,7 @@ namespace features::messages
 {
 const char *const kMessageColumns =
     "id, chat_id, sender_id, "
+    "(SELECT su.display_name FROM users su WHERE su.id = sender_id) AS sender_name, "
     "translate(encode(ciphertext, 'base64'), E'\\n', '') AS ciphertext, "
     "(extract(epoch FROM edited_at) * 1000)::bigint AS edited_at, "
     "(extract(epoch FROM deleted_at) * 1000)::bigint AS deleted_at, "
@@ -26,6 +27,7 @@ Message messageFromRow(const drogon::orm::Row &row, const std::string &prefix)
         row[prefix + "id"].as<int64_t>(),
         row[prefix + "chat_id"].as<int64_t>(),
         row[prefix + "sender_id"].as<int64_t>(),
+        row[prefix + "sender_name"].isNull() ? std::string() : row[prefix + "sender_name"].as<std::string>(),
         ciphertext.isNull() ? std::nullopt : std::optional<std::string>(ciphertext.as<std::string>()),
         optionalInt(row[prefix + "edited_at"]),
         optionalInt(row[prefix + "deleted_at"]),
@@ -39,6 +41,7 @@ Json::Value toJson(const Message &message)
     json["id"] = std::to_string(message.id);
     json["chatId"] = std::to_string(message.chatId);
     json["senderId"] = std::to_string(message.senderId);
+    json["senderName"] = message.senderName;
     json["ciphertext"] = message.ciphertext ? Json::Value(*message.ciphertext) : Json::Value();
     json["editedAt"] = message.editedAt ? Json::Value(static_cast<Json::Int64>(*message.editedAt)) : Json::Value();
     json["deletedAt"] = message.deletedAt ? Json::Value(static_cast<Json::Int64>(*message.deletedAt)) : Json::Value();

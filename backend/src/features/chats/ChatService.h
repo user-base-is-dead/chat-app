@@ -9,6 +9,7 @@
 
 #include "features/chats/ChatRepository.h"
 #include "features/messages/MessageRepository.h"
+#include "features/rooms/RoomService.h"
 #include "features/users/UserRepository.h"
 
 namespace features::chats
@@ -39,11 +40,14 @@ class ChatService
 
   private:
     drogon::Task<Membership> requireMember(int64_t chatId, int64_t userId);
+    drogon::Task<> requireReadable(int64_t chatId, int64_t userId);
     drogon::Task<ChatSummary> ownChanged(int64_t chatId, int64_t userId);
     drogon::Task<ChatSummary> changeStatus(int64_t chatId, int64_t userId, std::string from, std::string to);
 
     ChatRepository chats_;
     messages::MessageRepository messages_;
     users::UserRepository users_;
+    rooms::RoomRepository roomAccess_;
+    rooms::RoomService rooms_;
 };
 }

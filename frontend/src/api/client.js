@@ -52,9 +52,10 @@ export function accessToken() {
     return readItem(ACCESS_KEY)
 }
 
-export async function send(path, { method = 'GET', body, token } = {}) {
+export async function send(path, { method = 'GET', body, raw, token } = {}) {
     const headers = {}
     if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (raw) headers['Content-Type'] = raw.type || 'application/octet-stream'
     if (token) headers.Authorization = `Bearer ${token}`
 
     let response
@@ -62,7 +63,7 @@ export async function send(path, { method = 'GET', body, token } = {}) {
         response = await fetch(`/v1${path}`, {
             method,
             headers,
-            body: body === undefined ? undefined : JSON.stringify(body),
+            body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
         })
     } catch {
         throw new ApiError(0, 'network', 'Cannot reach the server. Check your connection.')

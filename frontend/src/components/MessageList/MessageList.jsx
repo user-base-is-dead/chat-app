@@ -10,7 +10,8 @@ const LOAD_OLDER_OFFSET = 120
 const JUMP_SHOW_OFFSET = 200
 const SEEN_EDGE = 16
 
-function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId }) {
+function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId, showSenders, hideTicks, canDeleteOthers = true }) {
+    const sameSide = (a, b) => (showSenders ? a.senderId === b.senderId : a.mine === b.mine)
     const listRef = useRef(null)
     const lastSeen = useRef({ first: null, last: null, height: 0, top: 0, hadNewer: false })
     const stickRef = useRef(false)
@@ -99,8 +100,12 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
                         <MessageBubble
                             message={msg}
                             focused={msg.id === focusId}
-                            groupStart={i > 0 && messages[i - 1].mine !== msg.mine}
-                            groupEnd={i === messages.length - 1 || messages[i + 1].mine !== msg.mine}
+                            groupStart={i > 0 && !sameSide(messages[i - 1], msg)}
+                            groupEnd={i === messages.length - 1 || !sameSide(messages[i + 1], msg)}
+                            showSender={showSenders && !msg.mine}
+                            firstOfSender={i === 0 || !sameSide(messages[i - 1], msg)}
+                            hideTicks={hideTicks}
+                            canDeleteOthers={canDeleteOthers}
                             onResend={() => onResend(msg.id)}
                             onDelete={() => onDelete(msg.id)}
                         />

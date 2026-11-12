@@ -1,21 +1,14 @@
 .header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    position: absolute;
-    top: 24px;
-    left: 0;
-    right: 0;
+    gap: 8px;
+    position: relative;
     z-index: 3;
-    width: calc(100% - 24px);
-    max-width: 720px;
-    height: 48px;
-    margin: 0 auto;
-    padding: 0 12px 0 4px;
-    border-radius: 24px;
+    flex-shrink: 0;
+    height: 64px;
+    padding: 0 12px 0 10px;
     background: var(--panel);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    border-bottom: 1px solid var(--border);
 }
 
 .backButton {
@@ -28,20 +21,22 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: var(--icon);
+    color: var(--text);
     cursor: pointer;
+    transition: background 0.2s, transform 0.25s var(--ease-spring);
 }
 
 .backButton:active {
     background: var(--surface);
+    transform: scale(0.9);
 }
 
 @media (max-width: 768px) {
     .header {
-        top: 0;
-        width: 100%;
+        height: 60px;
         padding-left: 4px;
-        gap: 6px;
+        padding-right: 6px;
+        gap: 2px;
     }
 
     .backButton {
@@ -49,21 +44,44 @@
     }
 }
 
+.peer {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 12px 5px 5px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.25s var(--ease-out);
+}
+
+.peer:hover {
+    background: var(--surface);
+}
+
+.peerText {
+    min-width: 0;
+}
+
 .name {
-    font-size: 16px;
+    font-family: var(--font-display);
+    font-size: 16.5px;
     font-weight: 600;
-    line-height: 1.3;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
     color: var(--text);
 }
 
 .status {
-    font-size: 14px;
+    margin-top: 1px;
+    font-size: 13px;
     line-height: 1.3;
     color: var(--text-muted);
-}
-
-.statusActive {
-    color: var(--accent);
 }
 
 .name.nameDisabled {
@@ -75,26 +93,7 @@
     color: var(--text-muted);
 }
 
-.peer {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    text-align: left;
-    font: inherit;
-    cursor: pointer;
-}
-
-.peerText {
-    min-width: 0;
-}
-
-.peerText .name,
-.peerText .status {
+.peerText .name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -103,7 +102,7 @@
 .actions {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     flex-shrink: 0;
 }
 
@@ -118,15 +117,25 @@
     background: transparent;
     color: var(--icon);
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.25s var(--ease-out), color 0.2s, transform 0.25s var(--ease-spring);
 }
 
 .action svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
 }
 
 .action:hover {
     background: var(--surface);
     color: var(--text);
+}
+
+.action:active {
+    transform: scale(0.92);
+}
+
+@media (max-width: 768px) {
+    .name {
+        font-size: 16px;
+    }
 }

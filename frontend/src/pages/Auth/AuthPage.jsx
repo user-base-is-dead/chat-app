@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+import { useState } from "react"
 import styles from './AuthPage.module.css'
 import logo from '../../assets/logo.png'
 import Input from "../../components/Input/Input"
@@ -78,51 +78,62 @@ function AuthPage({ onLogin }) {
 
     return (
         <div className={styles.page}>
-            <div className={leaving ? `${styles.card} ${styles.cardLeave}` : styles.card}>
-                <div className={shaking ? styles.shake : undefined} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setShaking(false) }}>
+            <section className={leaving ? `${styles.brand} ${styles.brandLeave}` : styles.brand}>
+                <div className={styles.shapes} aria-hidden="true">
+                    <span /><span /><span /><span /><span /><span />
+                </div>
+                <img className={styles.brandLogo} src={logo} alt="" />
+                <p className={styles.brandLine}>
+                    Every chat<br />has its own<br /><span className={styles.brandColor}>color.</span>
+                </p>
+            </section>
+            <div className={styles.formSide}>
+                <div className={leaving ? `${styles.card} ${styles.cardLeave}` : styles.card}>
+                    <div className={shaking ? styles.shake : undefined} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setShaking(false) }}>
 
-                    {/* header */}
+                        {/* header */}
 
-                    <div key={mode} className={styles.logo}><img src={logo} alt="Miron Chat logo" /></div>
-                    <h1 className={styles.title}>Miron Chat</h1>
-                    <p key={`sub-${mode}`} className={styles.subtitle}>{mode === 'login' ? 'Sign in to continue' : 'Create a new account'}</p>
+                        <div key={mode} className={styles.logo}><img src={logo} alt="Miron Chat logo" /></div>
+                        <h1 className={styles.title}>Miron Chat</h1>
+                        <p key={`sub-${mode}`} className={styles.subtitle}>{mode === 'login' ? 'Sign in to continue' : 'Create a new account'}</p>
 
-                    {/* tabs */}
+                        {/* tabs */}
 
-                    <div className={styles.tabs}>
-                        <span className={mode === 'login' ? styles.indicator : `${styles.indicator} ${styles.indicatorRight}`} />
-                        <button type="button" className={mode === 'login' ? styles.tabActive : styles.tab} onClick={() => switchMode('login')}>Login</button>
-                        <button type="button" className={mode === 'register' ? styles.tabActive : styles.tab} onClick={() => switchMode('register')}>Register</button>
+                        <div className={styles.tabs}>
+                            <span className={mode === 'login' ? styles.indicator : `${styles.indicator} ${styles.indicatorRight}`} />
+                            <button type="button" className={mode === 'login' ? styles.tabActive : styles.tab} onClick={() => switchMode('login')}>Login</button>
+                            <button type="button" className={mode === 'register' ? styles.tabActive : styles.tab} onClick={() => switchMode('register')}>Register</button>
+                        </div>
+
+                        {/* form */}
+
+                        <form className={styles.form} onSubmit={handleSubmit}>
+                            <div className={mode === 'register' ? `${styles.collapse} ${styles.collapseOpen}` : styles.collapse} inert={mode !== 'register'}>
+                                <div className={styles.collapseInner}>
+                                    <Input type="text" label="Name" value={displayName} maxLength={64} onChange={(e) => setDisplayName(e.target.value)} />
+                                </div>
+                            </div>
+                            <Input type="text" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <Input type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                            <div className={mode === 'register' ? `${styles.collapse} ${styles.collapseOpen}` : styles.collapse} inert={mode !== 'register'}>
+                                <div className={styles.collapseInner}>
+                                    <Input type="password" label="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                                </div>
+                            </div>
+                            {error && <p key={error} className={styles.error}>{error}</p>}
+                            {notice && <p className={styles.notice}>{notice}</p>}
+                            <button className={leaving ? `${styles.submit} ${styles.submitDone}` : styles.submit} type="submit" aria-busy={submitting}>
+                                {submitting ? (
+                                    <Spinner size={22} />
+                                ) : (
+                                    <span key={leaving ? 'done' : mode} className={styles.submitText}>
+                                        {leaving ? '✓' : mode === 'login' ? 'LOGIN' : 'REGISTER'}
+                                    </span>
+                                )}
+                            </button>
+                        </form>
+
                     </div>
-
-                    {/* form */}
-
-                    <form className={styles.form} onSubmit={handleSubmit}>
-                        <div className={mode === 'register' ? `${styles.collapse} ${styles.collapseOpen}` : styles.collapse} inert={mode !== 'register'}>
-                            <div className={styles.collapseInner}>
-                                <Input type="text" label="Name" value={displayName} maxLength={64} onChange={(e) => setDisplayName(e.target.value)} />
-                            </div>
-                        </div>
-                        <Input type="text" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-                        <Input type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                        <div className={mode === 'register' ? `${styles.collapse} ${styles.collapseOpen}` : styles.collapse} inert={mode !== 'register'}>
-                            <div className={styles.collapseInner}>
-                                <Input type="password" label="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                            </div>
-                        </div>
-                        {error && <p key={error} className={styles.error}>{error}</p>}
-                        {notice && <p className={styles.notice}>{notice}</p>}
-                        <button className={leaving ? `${styles.submit} ${styles.submitDone}` : styles.submit} type="submit" aria-busy={submitting}>
-                            {submitting ? (
-                                <Spinner size={22} />
-                            ) : (
-                                <span key={leaving ? 'done' : mode} className={styles.submitText}>
-                                    {leaving ? '✓' : mode === 'login' ? 'LOGIN' : 'REGISTER'}
-                                </span>
-                            )}
-                        </button>
-                    </form>
-
                 </div>
             </div>
         </div>

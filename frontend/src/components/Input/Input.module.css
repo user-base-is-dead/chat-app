@@ -4,24 +4,23 @@
 
 .input {
     width: 100%;
-    height: 56px;
+    height: 58px;
     padding: 20px 16px 4px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-control);
     background: var(--panel);
     color: var(--text);
     font-size: 16px;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s;
 }
 
 .input:hover {
-    border-color: var(--border-strong);
+    border-color: var(--text-muted);
 }
 
 .input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
 }
 
 .input:-webkit-autofill {
@@ -38,14 +37,15 @@
     color: var(--text-muted);
     font-size: 16px;
     pointer-events: none;
-    transition: top 0.2s, font-size 0.2s, color 0.2s, transform 0.2s;
+    transition: top 0.25s var(--ease-out), font-size 0.25s var(--ease-out), color 0.2s, transform 0.25s var(--ease-out);
 }
 
 .input:focus + .label,
 .input:not(:placeholder-shown) + .label {
-    top: 9px;
+    top: 10px;
     transform: translateY(0);
     font-size: 12px;
+    font-weight: 600;
 }
 
 .input:focus + .label {

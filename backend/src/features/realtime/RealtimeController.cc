@@ -10,6 +10,7 @@
 #include "core/security/Tokens.h"
 #include "features/chats/ChatRepository.h"
 #include "features/realtime/Hub.h"
+#include "features/rooms/RoomRepository.h"
 #include "features/users/UserRepository.h"
 
 namespace features::realtime
@@ -24,6 +25,7 @@ struct Session
 {
     int64_t userId = 0;
     int64_t deviceId = 0;
+    bool visible = true;
 };
 
 drogon::Task<> announcePresence(int64_t userId, bool online)
@@ -53,7 +55,10 @@ drogon::Task<> announcePresence(int64_t userId, bool online)
     }
 }
 
-drogon::Task<> authorize(std::weak_ptr<drogon::WebSocketConnection> weak, int64_t userId, int64_t deviceId)
+drogon::Task<> authorize(std::weak_ptr<drogon::WebSocketConnection> weak,
+                         int64_t userId,
+                         int64_t deviceId,
+                         bool visible)
 {
     bool known = false;
     try
@@ -79,10 +84,11 @@ drogon::Task<> authorize(std::weak_ptr<drogon::WebSocketConnection> weak, int64_
     const auto session = connection->getContext<Session>();
     session->userId = userId;
     session->deviceId = deviceId;
-    const bool cameOnline = hub().add(userId, connection);
+    session->visible = visible;
+    const bool cameOnline = hub().add(userId, connection, visible);
     if (!connection->connected())
     {
-        hub().remove(userId, connection);
+        hub().remove(userId, connection, visible);
         co_return;
     }
     connection->send(R"({"event":"ready","data":{}})");
@@ -94,6 +100,24 @@ drogon::Task<> relayTyping(int64_t userId, int64_t chatId, bool active)
 {
     try
     {
+        rooms::RoomRepository rooms;
+        if (const auto room = co_await rooms.access(chatId, userId))
+        {
+            if (room->status != "active" || room->kind != "group")
+                co_return;
+            const auto user = co_await users::UserRepository().findById(userId);
+            Json::Value data;
+            data["chatId"] = std::to_string(chatId);
+            data["userId"] = std::to_string(userId);
+            data["active"] = active;
+            data["name"] = user ? user->displayName : "";
+            const auto ids = co_await rooms.activeMemberIds(chatId);
+            for (const auto id : ids)
+                if (id != userId)
+                    hub().send(id, "typing", data);
+            co_return;
+        }
+
         const auto member = co_await chats::ChatRepository().membership(chatId, userId);
         if (!member || member->status != "active")
             co_return;
@@ -175,7 +199,8 @@ void RealtimeController::handleNewMessage(const drogon::WebSocketConnectionPtr &
         std::weak_ptr<drogon::WebSocketConnection> weak = connection;
         const auto userId = claims->userId;
         const auto deviceId = claims->deviceId;
-        drogon::async_run([weak, userId, deviceId] { return authorize(weak, userId, deviceId); });
+        const bool visible = !data["background"].asBool();
+        drogon::async_run([weak, userId, deviceId, visible] { return authorize(weak, userId, deviceId, visible); });
         return;
     }
 
@@ -195,7 +220,7 @@ void RealtimeController::handleConnectionClosed(const drogon::WebSocketConnectio
     const auto session = connection->getContext<Session>();
     if (!session || session->userId == 0)
         return;
-    if (hub().remove(session->userId, connection))
+    if (hub().remove(session->userId, connection, session->visible))
     {
         const auto userId = session->userId;
         drogon::async_run([userId] { return announcePresence(userId, false); });

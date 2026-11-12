@@ -1,27 +1,25 @@
 .wrap {
     width: calc(100% - 24px);
-    max-width: 720px;
+    max-width: 840px;
     margin: 0 auto;
     flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
     .wrap {
-        width: 100%;
-        margin-bottom: 6px;
+        width: calc(100% - 16px);
     }
 }
 
 .bar {
-    height: 48px;
+    height: 54px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 24px;
-    background: var(--glass);
+    border-radius: 999px;
+    background: var(--panel);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-small);
     color: var(--text-muted);
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
 }

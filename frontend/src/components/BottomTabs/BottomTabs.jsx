@@ -1,4 +1,6 @@
 import styles from './BottomTabs.module.css'
+import logo from '../../assets/logo.png'
+import Avatar from '../Avatar/Avatar'
 import ChatsIcon from '../Icons/ChatsIcon'
 import GroupsIcon from '../Icons/GroupsIcon'
 import ChannelsIcon from '../Icons/ChannelsIcon'
@@ -11,13 +13,15 @@ const tabs = [
     { id: 'settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
-function BottomTabs({ activeTab, onChange }) {
+function BottomTabs({ user, activeTab, onChange }) {
     return (
-        <nav className={styles.bar}>
+        <nav className={styles.bar} style={{ '--slot': tabs.findIndex((tab) => tab.id === activeTab) }}>
+            <img className={styles.logo} src={logo} alt="Miron Chat" />
+            <span className={styles.slider} />
             {tabs.map(({ id, label, Icon }) => (
                 <button
                     key={id}
-                    className={id === activeTab ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+                    className={[styles.tab, id === activeTab && styles.tabActive, id === 'settings' && styles.settingsTab].filter(Boolean).join(' ')}
                     type="button"
                     aria-current={id === activeTab ? 'page' : undefined}
                     onClick={() => onChange(id)}
@@ -26,6 +30,14 @@ function BottomTabs({ activeTab, onChange }) {
                     <span className={styles.label}>{label}</span>
                 </button>
             ))}
+            <button
+                className={activeTab === 'settings' ? `${styles.me} ${styles.meActive}` : styles.me}
+                type="button"
+                aria-label="Settings"
+                onClick={() => onChange('settings')}
+            >
+                <Avatar name={user.displayName || user.username} size={42} />
+            </button>
         </nav>
     )
 }

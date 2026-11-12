@@ -2,7 +2,7 @@ import { useState } from 'react'
 import styles from './UnrestrictBar.module.css'
 import Spinner from '../Spinner/Spinner'
 
-function UnrestrictBar({ onUnrestrict }) {
+function UnrestrictBar({ label = 'Unrestrict to chat', onUnrestrict }) {
     const [busy, setBusy] = useState(false)
 
     const unrestrict = async () => {
@@ -15,7 +15,7 @@ function UnrestrictBar({ onUnrestrict }) {
     return (
         <div className={styles.wrap}>
             <button className={styles.button} type="button" onClick={unrestrict} disabled={busy}>
-                {busy ? <Spinner size={20} /> : 'Unrestrict to chat'}
+                {busy ? <Spinner size={20} /> : label}
             </button>
         </div>
     )

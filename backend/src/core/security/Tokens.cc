@@ -21,6 +21,16 @@ std::string createAccessToken(int64_t userId, int64_t deviceId)
         .sign(jwt::algorithm::hs256{config::settings().jwtSecret});
 }
 
+std::string randomHex(size_t bytes)
+{
+    std::string raw(bytes, '\0');
+    randombytes_buf(raw.data(), bytes);
+    std::string hex(bytes * 2 + 1, '\0');
+    sodium_bin2hex(hex.data(), hex.size(), reinterpret_cast<const unsigned char *>(raw.data()), bytes);
+    hex.pop_back();
+    return hex;
+}
+
 std::optional<AccessClaims> verifyAccessToken(const std::string &token)
 {
     try

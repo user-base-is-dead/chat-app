@@ -5,7 +5,7 @@ import AttachIcon from '../Icons/AttachIcon'
 import EmojiIcon from '../Icons/EmojiIcon'
 import EmojiPanel from '../EmojiPanel/EmojiPanel'
 
-function MessageInput({ onSend, onTyping }) {
+function MessageInput({ onSend, onTyping, focusNow, onFocused }) {
     const [text, setText] = useState('')
     const [emojiOpen, setEmojiOpen] = useState(false)
     const [emojiPinned, setEmojiPinned] = useState(false)
@@ -21,6 +21,12 @@ function MessageInput({ onSend, onTyping }) {
         setEmojiOpen(false)
         setEmojiPinned(false)
     }
+
+    useEffect(() => {
+        if (!focusNow) return
+        inputRef.current.focus()
+        onFocused()
+    }, [focusNow, onFocused])
 
     useEffect(() => {
         if (!emojiOpen) return
@@ -138,7 +144,7 @@ function MessageInput({ onSend, onTyping }) {
                 >
                     <EmojiIcon />
                 </button>
-                <button className={styles.sendButton} type="submit" aria-label="Send">
+                <button className={text.trim() ? `${styles.sendButton} ${styles.sendReady}` : styles.sendButton} type="submit" aria-label="Send">
                     <SendIcon />
                 </button>
             </form>

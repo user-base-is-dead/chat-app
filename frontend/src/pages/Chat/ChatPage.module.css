@@ -1,19 +1,19 @@
 .layout {
     position: relative;
     display: flex;
-    overflow: hidden;
-    gap: 12px;
+    gap: 8px;
     height: 100vh;
     height: 100dvh;
-    background: var(--doodle) 0 0 / 320px repeat, var(--bg-gradient);
+    padding: 8px 8px 8px 0;
+    overflow: hidden;
+    background: var(--canvas);
 }
 
 .sidebarArea {
-    width: 380px;
+    width: 432px;
     flex-shrink: 0;
     display: flex;
-    margin: 24px 0 24px 24px;
-    animation: fromLeft 0.55s cubic-bezier(0.34, 1.3, 0.64, 1);
+    min-height: 0;
 }
 
 .chat {
@@ -22,72 +22,72 @@
     display: flex;
     justify-content: center;
     min-width: 0;
-    animation: fromRight 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) 0.1s backwards;
+    border-radius: var(--radius-sheet);
+    background: color-mix(in srgb, var(--chroma) var(--stage-tint), var(--stage));
+    overflow: hidden;
+    isolation: isolate;
+    transition: --chroma 0.8s var(--ease-out);
+    animation: stageRise 0.5s var(--ease-out) backwards;
 }
 
-@keyframes fromLeft {
+.chat::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--chroma);
+    -webkit-mask: var(--doodle) 0 0 / 300px repeat;
+    mask: var(--doodle) 0 0 / 300px repeat;
+    opacity: var(--doodle-strength);
+    pointer-events: none;
+}
+
+@keyframes stageRise {
     from {
         opacity: 0;
-        transform: translateX(-40px) scale(0.97);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0) scale(1);
-    }
-}
-
-@keyframes fromRight {
-    from {
-        opacity: 0;
-        transform: translateX(40px) scale(0.97);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0) scale(1);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .sidebarArea, .chat {
-        animation: none;
+        transform: translateY(12px);
     }
 }
 
 .chatInner {
     position: relative;
+    z-index: 1;
     width: 100%;
     display: flex;
     flex-direction: column;
-    padding: 0 0 24px;
-    --header-top: 24px;
-    --header-space: 84px;
+    padding: 0 0 12px;
+}
+
+@media (min-width: 769px) {
+    .chatInner {
+        view-transition-name: stage;
+    }
 }
 
 @media (max-width: 1000px) {
     .sidebarArea {
-        width: 320px;
+        width: 380px;
     }
 }
 
 @media (max-width: 768px) {
     .layout {
         gap: 0;
+        padding: 0;
     }
 
     .sidebarArea {
         width: 100%;
-        margin: 0;
     }
 
     .chatInner {
-        padding: 0;
-        --header-top: 0px;
-        --header-space: 60px;
+        padding: 0 0 8px;
     }
 
     .chat {
         display: none;
-        padding: 8px;
+        border-radius: 0;
+        animation: none;
     }
 
     .chatOpen .sidebarArea {
@@ -101,38 +101,38 @@
 
 .infoArea {
     position: absolute;
-    top: 24px;
-    right: 24px;
-    bottom: 24px;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
     z-index: 5;
     width: 360px;
     display: flex;
     transform: translateX(calc(100% + 24px));
     visibility: hidden;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1), visibility 0s 0.25s;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 1, 1), visibility 0s 0.3s;
 }
 
 .infoShown {
     transform: translateX(0);
     visibility: visible;
-    transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1), visibility 0s;
+    transition: transform 0.55s var(--ease-out), visibility 0s;
 }
 
 @media (min-width: 1201px) {
     .chat {
-        transition: padding-right 0.25s cubic-bezier(0.4, 0, 1, 1);
+        transition: --chroma 0.8s var(--ease-out), margin-right 0.3s cubic-bezier(0.4, 0, 1, 1);
     }
 
     .infoOpen .chat {
-        padding-right: 384px;
-        transition: padding-right 0.3s cubic-bezier(0, 0, 0.2, 1);
+        margin-right: 368px;
+        transition: --chroma 0.8s var(--ease-out), margin-right 0.55s var(--ease-out);
     }
 }
 
 @media (max-width: 1200px) {
     .infoShown {
-        box-shadow: var(--shadow);
-        border-radius: 24px;
+        border-radius: var(--radius-sheet);
+        box-shadow: var(--shadow-lift);
     }
 }
 
@@ -156,5 +156,6 @@
     .infoShown,
     .chat {
         transition: none;
+        animation: none;
     }
 }

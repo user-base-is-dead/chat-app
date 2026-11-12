@@ -6,32 +6,36 @@
 
 namespace features::realtime
 {
-bool Hub::add(int64_t userId, const drogon::WebSocketConnectionPtr &connection)
+bool Hub::add(int64_t userId, const drogon::WebSocketConnectionPtr &connection, bool visible)
 {
     std::lock_guard lock(mutex_);
-    auto &userConnections = connections_[userId];
-    const bool cameOnline = userConnections.empty();
-    userConnections.insert(connection);
-    return cameOnline;
+    connections_[userId].insert(connection);
+    if (!visible)
+        return false;
+    return ++visibleCounts_[userId] == 1;
 }
 
-bool Hub::remove(int64_t userId, const drogon::WebSocketConnectionPtr &connection)
+bool Hub::remove(int64_t userId, const drogon::WebSocketConnectionPtr &connection, bool visible)
 {
     std::lock_guard lock(mutex_);
     const auto it = connections_.find(userId);
-    if (it == connections_.end())
+    if (it == connections_.end() || it->second.erase(connection) == 0)
         return false;
-    it->second.erase(connection);
-    if (!it->second.empty())
+    if (it->second.empty())
+        connections_.erase(it);
+    if (!visible)
         return false;
-    connections_.erase(it);
+    const auto count = visibleCounts_.find(userId);
+    if (count == visibleCounts_.end() || --count->second > 0)
+        return false;
+    visibleCounts_.erase(count);
     return true;
 }
 
 bool Hub::isOnline(int64_t userId) const
 {
     std::lock_guard lock(mutex_);
-    return connections_.contains(userId);
+    return visibleCounts_.contains(userId);
 }
 
 void Hub::send(int64_t userId, const std::string &event, const Json::Value &data) const

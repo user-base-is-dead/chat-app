@@ -11,13 +11,20 @@ import MuteIcon from '../Icons/MuteIcon'
 import UnmuteIcon from '../Icons/UnmuteIcon'
 import CopyIcon from '../Icons/CopyIcon'
 import DeleteIcon from '../Icons/DeleteIcon'
-import { peerStatus } from '../../utils/lastSeen'
+import LogoutIcon from '../Icons/LogoutIcon'
+import PeerStatus from '../PeerStatus/PeerStatus'
+import { roomLabel } from '../../utils/roomLink'
 
-function ChatHeader({ chat, typing, onBack, onOpenInfo, onCall, onSearch, onToggleMute, onDelete }) {
+function ChatHeader({ chat, typing, typingName, onBack, onOpenInfo, onCall, onSearch, onToggleMute, onLeave, onDelete }) {
     const [menu, setMenu] = useState(null)
-    const status = peerStatus(chat, typing)
 
-    const items = [
+    const items = chat.kind ? [
+        { label: `${roomLabel(chat.kind)} Info`, Icon: ProfileIcon, onClick: onOpenInfo },
+        chat.muted ? { label: 'Unmute', Icon: UnmuteIcon, onClick: onToggleMute } : { label: 'Mute', Icon: MuteIcon, onClick: onToggleMute },
+        chat.role === 'owner'
+            ? { label: `Delete ${roomLabel(chat.kind)}`, Icon: DeleteIcon, danger: true, onClick: onDelete }
+            : { label: `Leave ${roomLabel(chat.kind)}`, Icon: LogoutIcon, danger: true, onClick: onLeave },
+    ] : [
         { label: 'View Profile', Icon: ProfileIcon, onClick: onOpenInfo },
         chat.muted ? { label: 'Unmute', Icon: UnmuteIcon, onClick: onToggleMute } : { label: 'Mute', Icon: MuteIcon, onClick: onToggleMute },
         { label: 'Copy ID', Icon: CopyIcon, onClick: () => navigator.clipboard?.writeText(chat.peerId).catch(() => {}) },
@@ -35,16 +42,20 @@ function ChatHeader({ chat, typing, onBack, onOpenInfo, onCall, onSearch, onTogg
                 <BackIcon />
             </button>
             <button className={styles.peer} type="button" onClick={onOpenInfo}>
-                <Avatar name={chat.name} size={40} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+                <Avatar name={chat.name} photo={chat.photo} size={44} disabled={chat.peerDisabled} deleted={chat.peerDeleted} morphTarget />
                 <div className={styles.peerText}>
                     <div className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>{chat.name}</div>
-                    <div className={typing || chat.peerOnline ? `${styles.status} ${styles.statusActive}` : styles.status}>{status}</div>
+                    <div className={styles.status}>
+                        <PeerStatus key={chat.id} chat={chat} typing={typing} typingName={typingName} />
+                    </div>
                 </div>
             </button>
             <div className={styles.actions}>
-                <button className={styles.action} type="button" aria-label="Call" onClick={onCall}>
-                    <CallIcon />
-                </button>
+                {!chat.kind && (
+                    <button className={styles.action} type="button" aria-label="Call" onClick={onCall}>
+                        <CallIcon />
+                    </button>
+                )}
                 <button className={styles.action} type="button" aria-label="Search" onClick={onSearch}>
                     <ChatSearchIcon />
                 </button>

@@ -8,7 +8,9 @@ import EditIcon from '../../components/Icons/EditIcon'
 import LockIcon from '../../components/Icons/LockIcon'
 import DisabledUserIcon from '../../components/Icons/DisabledUserIcon'
 import LogoutIcon from '../../components/Icons/LogoutIcon'
-import { getThemeChoice, setThemeChoice } from '../../utils/theme'
+import { getColorChoice, getThemeChoice, setColorChoice, setThemeChoice } from '../../utils/theme'
+import { appColors } from '../../utils/chroma'
+import { revealChange } from '../../utils/motion'
 import ProfileSettings from './ProfileSettings'
 import AccountSettings from './AccountSettings'
 import PasswordSettings from './PasswordSettings'
@@ -23,10 +25,22 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [view, setView] = useState('main')
     const [copied, setCopied] = useState(null)
     const [theme, setTheme] = useState(getThemeChoice)
+    const [color, setColor] = useState(getColorChoice)
 
-    const chooseTheme = (choice) => {
-        setThemeChoice(choice)
-        setTheme(choice)
+    const chooseTheme = (choice, e) => {
+        if (choice === theme) return
+        revealChange(() => {
+            setThemeChoice(choice)
+            setTheme(choice)
+        }, e.clientX, e.clientY)
+    }
+
+    const chooseColor = (choice, e) => {
+        if (choice === color) return
+        revealChange(() => {
+            setColorChoice(choice)
+            setColor(choice)
+        }, e.clientX, e.clientY)
     }
 
     const copy = async (key, value) => {
@@ -53,11 +67,16 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
 
     return (
         <div className={styles.page}>
-            <button className={styles.hero} type="button" onClick={() => setView('profile')}>
-                <Avatar name={user.displayName || user.username} size={100} />
+            <div className={styles.hero}>
+                <span className={styles.cover} />
+                <button className={styles.heroEdit} type="button" onClick={() => setView('profile')}>
+                    <EditIcon />
+                    Edit
+                </button>
+                <Avatar name={user.displayName || user.username} size={92} />
                 <span className={styles.heroName}>{user.displayName}</span>
                 <span className={styles.heroStatus}>online</span>
-            </button>
+            </div>
 
             <div className={styles.group}>
                 <button className={styles.row} type="button" onClick={() => copy('username', `@${user.username}`)}>
@@ -78,16 +97,31 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
 
             <div className={styles.group}>
                 <span className={styles.groupTitle}>Appearance</span>
-                <div className={styles.themes}>
+                <div className={styles.themes} style={{ '--slot': themes.findIndex((item) => item.id === theme) }}>
+                    <span className={styles.themeSlider} />
                     {themes.map((item) => (
                         <button
                             key={item.id}
                             className={item.id === theme ? `${styles.themeOption} ${styles.themeActive}` : styles.themeOption}
                             type="button"
-                            onClick={() => chooseTheme(item.id)}
+                            onClick={(e) => chooseTheme(item.id, e)}
                         >
                             {item.label}
                         </button>
+                    ))}
+                </div>
+                <span className={styles.colorTitle}>Color</span>
+                <div className={styles.colors}>
+                    {appColors.map((item) => (
+                        <button
+                            key={item.id}
+                            className={item.id === color ? `${styles.color} ${styles.colorActive}` : styles.color}
+                            type="button"
+                            style={{ '--swatch': item.value }}
+                            aria-label={item.label}
+                            aria-pressed={item.id === color}
+                            onClick={(e) => chooseColor(item.id, e)}
+                        />
                     ))}
                 </div>
             </div>

@@ -1,19 +1,54 @@
 .item, .itemActive {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 9px;
-    border-radius: 12px;
+    padding: 9px 14px 9px 10px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s var(--ease-out), transform 0.25s var(--ease-spring);
+    animation: rowIn 0.45s var(--ease-out) backwards;
+    animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+@keyframes rowIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
 }
 
 .item:hover {
-    background: var(--surface);
+    background: var(--surface-strong);
+}
+
+.item:active, .itemActive:active {
+    transform: scale(0.99);
 }
 
 .itemActive {
-    background: var(--accent);
+    background: var(--chroma);
+}
+
+.itemActive .name,
+.itemActive .time,
+.itemActive .lastMessage,
+.itemActive .mutedMark,
+.itemActive .pinnedMark,
+.itemActive .name.nameDisabled,
+.itemActive .name.nameDeleted {
+    color: #ffffff;
+}
+
+.itemActive .time,
+.itemActive .lastMessage {
+    opacity: 0.82;
+}
+
+.itemActive .unread,
+.itemActive .unread.unreadMuted {
+    background: #ffffff;
+    color: var(--chroma);
 }
 
 .info {
@@ -25,13 +60,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     margin-bottom: 4px;
-}
-
-.name {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
 }
 
 .name {
@@ -39,6 +69,10 @@
     align-items: center;
     gap: 4px;
     min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
 }
 
 .mutedMark,
@@ -62,13 +96,11 @@
     height: 18px;
 }
 
-.unread.unreadMuted {
-    background: var(--muted-badge);
-    color: var(--text-muted);
-}
-
 .time {
+    flex-shrink: 0;
     font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     color: var(--text-muted);
 }
 
@@ -84,38 +116,36 @@
     height: 22px;
     padding: 0 7px;
     border-radius: 11px;
-    background: var(--accent);
+    background: var(--chroma);
     font-size: 12px;
     font-weight: 600;
     line-height: 22px;
     text-align: center;
-    color: var(--on-accent);
+    color: #ffffff;
+    animation: badgeIn 0.45s var(--ease-spring) backwards;
+    animation-delay: calc(var(--i, 0) * 35ms + 0.2s);
+}
+
+@keyframes badgeIn {
+    from {
+        transform: scale(0.4);
+        opacity: 0;
+    }
+}
+
+.unread.unreadMuted {
+    background: var(--muted-badge);
+    color: var(--text-muted);
 }
 
 .lastMessage {
     flex: 1;
     min-width: 0;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.itemActive .name,
-.itemActive .time,
-.itemActive .lastMessage,
-.itemActive .mutedMark,
-.itemActive .pinnedMark,
-.itemActive .name.nameDisabled,
-.itemActive .name.nameDeleted {
-    color: var(--on-accent);
-}
-
-.itemActive .unread,
-.itemActive .unread.unreadMuted {
-    background: var(--on-accent);
-    color: var(--accent);
 }
 
 .leaving {
@@ -145,9 +175,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .item, .itemActive, .unread {
+        animation: none;
+    }
+
     .leaving {
         animation: none;
         display: none;
+    }
+
+    .item:active, .itemActive:active {
+        transform: none;
     }
 }
 

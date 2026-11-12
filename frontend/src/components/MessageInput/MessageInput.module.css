@@ -1,15 +1,14 @@
 .wrap {
     position: relative;
     width: calc(100% - 24px);
-    max-width: 720px;
+    max-width: 840px;
     margin: 0 auto;
     flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
     .wrap {
-        width: 100%;
-        margin-bottom: 6px;
+        width: calc(100% - 16px);
     }
 }
 
@@ -17,38 +16,24 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    height: 48px;
-    padding: 0 4px;
-    border-radius: 24px;
+    height: 54px;
+    padding: 0 6px;
+    border-radius: 999px;
     background: var(--panel);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    border: 1px solid var(--border-strong);
     flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
 }
 
-.iconButton {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--icon);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, color 0.2s;
+.bar:focus-within {
+    border-color: color-mix(in srgb, var(--chroma) 45%, transparent);
+    background: var(--panel);
 }
 
-.iconButton:hover {
-    background: var(--surface);
-    color: var(--text);
-}
-
+.iconButton,
 .emojiButton {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     flex-shrink: 0;
     border: none;
     border-radius: 50%;
@@ -58,35 +43,42 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, color 0.2s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: background 0.25s var(--ease-out), color 0.2s, transform 0.25s var(--ease-spring);
 }
 
-.emojiButton:hover, .emojiButtonActive {
+.iconButton:hover,
+.emojiButton:hover,
+.emojiButtonActive {
     background: var(--surface);
     color: var(--text);
 }
 
-.emojiButton:hover svg {
-    transform: rotate(-8deg) scale(1.06);
+.iconButton:active,
+.emojiButton:active {
+    transform: scale(0.92);
 }
 
 .emojiButton svg {
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.35s var(--ease-spring);
 }
 
-.emojiButton:active {
-    transform: scale(0.88);
+.emojiButton:hover svg {
+    transform: scale(1.06);
 }
 
 .input {
     flex: 1;
     min-width: 0;
     height: 100%;
-    padding: 0 4px;
+    padding: 0 8px;
     border: none;
     background: transparent;
     color: var(--text);
-    font-size: 16px;
+    font-size: 15.5px;
+    outline: none;
+}
+
+.input:focus-visible {
     outline: none;
 }
 
@@ -95,30 +87,51 @@
 }
 
 .sendButton {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     flex-shrink: 0;
+    margin-left: 2px;
     border: none;
     border-radius: 50%;
-    background: var(--accent-gradient);
-    color: var(--on-accent);
+    background: var(--surface-strong);
+    color: var(--muted-icon);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0 0 0 3px;
-    transition: filter 0.2s, transform 0.1s;
+    transform: scale(0.9);
+    transition: background 0.3s var(--ease-out), color 0.3s, transform 0.4s var(--ease-spring), border-radius 0.4s var(--ease-out);
 }
 
 .sendButton svg {
     width: 21px;
     height: 21px;
+    transform: rotate(-35deg) scale(0.9);
+    transition: transform 0.45s var(--ease-spring);
 }
 
-.sendButton:hover {
-    filter: brightness(1.08);
+.sendReady {
+    background: var(--chroma);
+    color: #ffffff;
+    transform: scale(1);
 }
 
-.sendButton:active {
+.sendReady svg {
+    transform: rotate(0) scale(1);
+}
+
+.sendReady:hover svg {
+    transform: translateX(2px);
+}
+
+.sendReady:active {
     transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sendButton,
+    .sendButton svg {
+        transition: none;
+    }
 }

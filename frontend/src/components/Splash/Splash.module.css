@@ -5,16 +5,32 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 24px;
-    background: var(--doodle) 0 0 / 320px repeat, var(--bg-gradient);
+    gap: 28px;
+    background: var(--canvas);
 }
 
 .logo {
-    width: 96px;
-    height: 96px;
-    object-fit: cover;
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    animation: breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+    0%, 100% {
+        transform: scale(1) rotate(0);
+    }
+    50% {
+        transform: scale(1.07) rotate(-4deg);
+    }
 }
 
 .spinner {
-    color: var(--accent);
+    color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo {
+        animation: none;
+    }
 }

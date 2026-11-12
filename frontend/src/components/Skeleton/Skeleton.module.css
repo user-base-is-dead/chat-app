@@ -16,13 +16,13 @@
 .row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 9px;
+    gap: 13px;
+    padding: 10px 12px 10px 10px;
 }
 
 .avatar {
-    width: 54px;
-    height: 54px;
+    width: 52px;
+    height: 52px;
     flex-shrink: 0;
     border-radius: 50%;
 }
@@ -47,8 +47,8 @@
 }
 
 .bubble {
-    height: 34px;
-    border-radius: 15px;
+    height: 38px;
+    border-radius: 20px;
     opacity: 0.85;
 }
 

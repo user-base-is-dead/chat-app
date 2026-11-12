@@ -15,6 +15,7 @@ struct Message
     int64_t id;
     int64_t chatId;
     int64_t senderId;
+    std::string senderName;
     std::optional<std::string> ciphertext;
     std::optional<int64_t> editedAt;
     std::optional<int64_t> deletedAt;

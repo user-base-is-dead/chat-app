@@ -217,7 +217,7 @@ drogon::Task<std::vector<messages::Message>> ChatService::messages(int64_t chatI
                                                                    int64_t beforeId,
                                                                    int limit)
 {
-    co_await requireMember(chatId, userId);
+    co_await requireReadable(chatId, userId);
     co_return co_await messages_.list(chatId, beforeId, limit);
 }
 
@@ -226,7 +226,7 @@ drogon::Task<std::vector<messages::Message>> ChatService::messagesAfter(int64_t 
                                                                         int64_t afterId,
                                                                         int limit)
 {
-    co_await requireMember(chatId, userId);
+    co_await requireReadable(chatId, userId);
     co_return co_await messages_.listAfter(chatId, afterId, limit);
 }
 
@@ -236,6 +236,8 @@ drogon::Task<messages::Message> ChatService::send(int64_t chatId,
                                                   std::string ciphertext)
 {
     validateCiphertext(ciphertext);
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+        co_return co_await rooms_.send(chatId, *room, userId, deviceId, ciphertext);
     const auto member = co_await requireMember(chatId, userId);
     if (member.status == "request")
         throw ApiError(drogon::k403Forbidden, "accept_first", "Accept the message request before replying");
@@ -260,6 +262,8 @@ drogon::Task<messages::Message> ChatService::edit(int64_t chatId,
                                                   std::string ciphertext)
 {
     validateCiphertext(ciphertext);
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+        co_return co_await rooms_.edit(chatId, *room, userId, messageId, ciphertext);
     const auto member = co_await requireMember(chatId, userId);
     auto message = co_await messages_.edit(chatId, messageId, userId, ciphertext);
     if (!message)
@@ -270,6 +274,11 @@ drogon::Task<messages::Message> ChatService::edit(int64_t chatId,
 
 drogon::Task<bool> ChatService::deleteMessage(int64_t chatId, int64_t userId, int64_t messageId)
 {
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+    {
+        co_await rooms_.deleteMessage(chatId, *room, userId, messageId);
+        co_return false;
+    }
     const auto member = co_await requireMember(chatId, userId);
     if (!co_await messages_.remove(chatId, messageId))
         throw ApiError(drogon::k404NotFound, "message_not_found", "Message not found");
@@ -288,12 +297,28 @@ drogon::Task<bool> ChatService::deleteMessage(int64_t chatId, int64_t userId, in
 
 drogon::Task<> ChatService::markRead(int64_t chatId, int64_t userId, int64_t messageId)
 {
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+    {
+        co_await rooms_.markRead(chatId, *room, userId, messageId);
+        co_return;
+    }
     const auto member = co_await requireMember(chatId, userId);
     co_await chats_.markRead(chatId, userId, messageId);
 
     notifyReadUpTo(chatId, userId, messageId, userId);
     if (member.status == "active")
         notifyReadUpTo(chatId, userId, messageId, member.peerId);
+}
+
+drogon::Task<> ChatService::requireReadable(int64_t chatId, int64_t userId)
+{
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+    {
+        if (room->status != "active")
+            throw chatNotFound();
+        co_return;
+    }
+    co_await requireMember(chatId, userId);
 }
 
 drogon::Task<Membership> ChatService::requireMember(int64_t chatId, int64_t userId)

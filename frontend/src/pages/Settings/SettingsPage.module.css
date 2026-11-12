@@ -3,47 +3,99 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 8px;
+    padding: 2px 12px 24px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar) transparent;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .hero {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 16px 12px 8px;
-    border: none;
-    border-radius: 16px;
-    background: transparent;
-    color: var(--text);
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.hero:hover {
+    gap: 2px;
+    padding: 58px 12px 18px;
+    border-radius: var(--radius-card);
     background: var(--surface);
+    color: var(--text);
+    overflow: hidden;
+    isolation: isolate;
+    flex-shrink: 0;
 }
 
-.hero > :first-child {
+.heroEdit {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 13px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.25s var(--ease-spring);
+}
+
+.heroEdit svg {
+    width: 16px;
+    height: 16px;
+}
+
+.heroEdit:hover {
+    transform: scale(1.05);
+}
+
+.heroEdit:active {
+    transform: scale(0.94);
+}
+
+.cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    height: 104px;
+    background: var(--chroma);
+}
+
+.cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    -webkit-mask: var(--doodle) 0 0 / 240px repeat;
+    mask: var(--doodle) 0 0 / 240px repeat;
+    opacity: 0.9;
+}
+
+.hero > [data-avatar] {
     margin-bottom: 10px;
+    box-shadow: 0 0 0 5px var(--surface);
 }
 
 .heroName {
     max-width: 100%;
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .heroStatus {
-    font-size: 14px;
-    color: var(--accent);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--success);
 }
 
 .profileHint {
@@ -55,65 +107,118 @@
     display: flex;
     flex-direction: column;
     padding: 6px;
-    border-radius: 16px;
+    border-radius: var(--radius-card);
     background: var(--surface);
+    flex-shrink: 0;
 }
 
 .groupTitle {
-    padding: 6px 10px 8px;
-    font-size: 14px;
+    padding: 8px 10px 10px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--text-muted);
 }
 
 .themes {
+    position: relative;
     display: flex;
-    gap: 6px;
-    padding: 0 4px 4px;
-}
-
-.themeOption {
-    flex: 1;
-    height: 38px;
-    border: 1px solid var(--border-strong);
-    border-radius: 19px;
-    background: transparent;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.themeOption:hover {
+    padding: 3px;
+    border-radius: 10px;
     background: var(--surface-strong);
 }
 
-.themeActive,
-.themeActive:hover {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
+.themeSlider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc((100% - 8px) / 3);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: var(--shadow-small);
+    transform: translateX(calc(var(--slot, 0) * 100%));
+    transition: transform 0.5s var(--ease-out);
+}
+
+.themeOption {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    height: 38px;
+    border: none;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.themeOption:hover,
+.themeActive {
+    color: var(--text);
+}
+
+.colorTitle {
+    padding: 14px 10px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.colors {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0 8px 10px;
+}
+
+.color {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--swatch);
+    cursor: pointer;
+    transition: transform 0.3s var(--ease-spring);
+}
+
+.color:hover {
+    transform: scale(1.1);
+}
+
+.color:active {
+    transform: scale(0.9);
+}
+
+.colorActive {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--swatch);
 }
 
 .row {
     width: 100%;
-    min-height: 52px;
+    min-height: 54px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     padding: 8px 10px;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--text);
     text-align: left;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.25s var(--ease-spring);
 }
 
 .row:hover {
     background: var(--surface-strong);
+}
+
+.row:active {
+    transform: scale(0.98);
 }
 
 .icon {
@@ -123,8 +228,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9px;
-    color: var(--on-accent);
+    border-radius: 8px;
+    color: #ffffff;
 }
 
 .icon svg {
@@ -163,54 +268,71 @@
 .rowLabel {
     flex: 1;
     min-width: 0;
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .rowHint {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-muted);
 }
 
 .chevron {
     display: flex;
     color: var(--text-muted);
+    transition: transform 0.3s var(--ease-spring);
+}
+
+.row:hover .chevron {
+    transform: translateX(3px);
 }
 
 .logout {
     color: var(--danger);
 }
 
+.logout:hover {
+    background: var(--danger-soft);
+}
+
 .subHeader {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
 }
 
 .back {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
+    margin-left: -6px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: var(--icon);
+    color: var(--text);
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s, transform 0.25s var(--ease-spring);
 }
 
 .back:hover {
-    background: var(--surface);
-    color: var(--text);
+    background: var(--surface-strong);
+}
+
+.back:active {
+    transform: scale(0.9);
 }
 
 .subTitle {
-    font-size: 16px;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--text);
 }
 
@@ -220,23 +342,25 @@
     align-items: center;
     gap: 8px;
     padding: 8px 0 4px;
+    flex-shrink: 0;
 }
 
 .idChip {
-    padding: 6px 12px;
+    padding: 7px 14px;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--surface);
     color: var(--text-muted);
     font: inherit;
-    font-size: 13px;
+    font-size: 12.5px;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
 }
 
 .idChip:hover {
     color: var(--accent);
-    border-color: var(--accent-soft);
+    border-color: var(--accent);
 }
 
 .form {
@@ -269,26 +393,29 @@
 
 .primary,
 .dangerButton {
-    height: 48px;
+    height: 52px;
     border: none;
-    border-radius: 14px;
+    border-radius: var(--radius-control);
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
     cursor: pointer;
-    transition: filter 0.2s, transform 0.1s, opacity 0.2s;
+    transition: background 0.2s, transform 0.25s var(--ease-spring), opacity 0.2s;
 }
 
 .primary {
     color: var(--on-accent);
-    background: var(--accent-gradient);
+    background: var(--accent);
 }
 
 .dangerButton {
     background: var(--danger);
 }
 
-.primary:hover,
+.primary:hover {
+    background: var(--accent-hover);
+}
+
 .dangerButton:hover {
     filter: brightness(1.06);
 }
@@ -300,9 +427,15 @@
 
 .primary:disabled,
 .dangerButton:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: default;
-    box-shadow: none;
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
+.dangerButton:disabled {
+    background: var(--danger);
+    color: #ffffff;
 }
 
 .option {
@@ -310,17 +443,21 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 14px 16px;
-    border: 1px solid transparent;
-    border-radius: 16px;
+    padding: 16px 18px;
+    border: 2px solid transparent;
+    border-radius: 20px;
     background: var(--surface);
     text-align: left;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.2s, border-color 0.2s, transform 0.25s var(--ease-spring);
 }
 
 .option:hover {
     background: var(--surface-strong);
+}
+
+.option:active {
+    transform: scale(0.985);
 }
 
 .optionActive,
@@ -330,8 +467,10 @@
 }
 
 .optionTitle {
-    font-size: 16px;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--text);
 }
 
@@ -340,22 +479,36 @@
 }
 
 .optionText {
-    font-size: 14px;
-    line-height: 1.4;
+    font-size: 13.5px;
+    line-height: 1.45;
     color: var(--text-muted);
 }
 
 .cancel {
-    height: 40px;
+    height: 44px;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     background: transparent;
     font-size: 15px;
+    font-weight: 500;
     color: var(--text-muted);
     cursor: pointer;
+    transition: background 0.2s, color 0.2s;
 }
 
 .cancel:hover {
     background: var(--surface);
     color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .page {
+        padding: 2px 12px calc(104px + env(safe-area-inset-bottom));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .themeSlider {
+        transition: none;
+    }
 }

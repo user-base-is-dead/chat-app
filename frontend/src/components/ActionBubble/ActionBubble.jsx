@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './ActionBubble.module.css'
 import BubbleIcon from '../Icons/BubbleIcon'
+import SearchIcon from '../Icons/SearchIcon'
+import PlusIcon from '../Icons/PlusIcon'
 
 const actions = [
-    { id: 'contacts', label: 'Add Contacts' },
-    { id: 'groups', label: 'Search Group' },
-    { id: 'channels', label: 'Search Channel' },
+    { id: 'new-group', label: 'New Group', Icon: PlusIcon },
+    { id: 'new-channel', label: 'New Channel', Icon: PlusIcon },
+    { id: 'contacts', label: 'Search User', Icon: BubbleIcon },
+    { id: 'groups', label: 'Search Group', Icon: BubbleIcon },
+    { id: 'channels', label: 'Search Channel', Icon: BubbleIcon },
 ]
 
 function ActionBubble({ onSelect }) {
@@ -39,9 +43,9 @@ function ActionBubble({ onSelect }) {
         <div className={styles.wrap} ref={wrapRef}>
             {open && (
                 <div className={styles.menu} role="menu">
-                    {actions.map(({ id, label }) => (
+                    {actions.map(({ id, label, Icon }) => (
                         <button key={id} className={styles.item} type="button" role="menuitem" onClick={() => choose(id)}>
-                            <span className={styles.itemIcon}><BubbleIcon /></span>
+                            <span className={styles.itemIcon}><Icon /></span>
                             {label}
                         </button>
                     ))}
@@ -50,11 +54,11 @@ function ActionBubble({ onSelect }) {
             <button
                 className={open ? `${styles.button} ${styles.buttonOpen}` : styles.button}
                 type="button"
-                aria-label="Add Contacts"
+                aria-label="Search or create"
                 aria-expanded={open}
                 onClick={() => setOpen((value) => !value)}
             >
-                <BubbleIcon />
+                <SearchIcon />
             </button>
         </div>
     )

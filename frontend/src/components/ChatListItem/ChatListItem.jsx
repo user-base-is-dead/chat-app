@@ -9,9 +9,12 @@ import DeleteIcon from '../Icons/DeleteIcon'
 import HighlightText from '../HighlightText/HighlightText'
 import RestrictIcon from '../Icons/RestrictIcon'
 import CopyIcon from '../Icons/CopyIcon'
+import LogoutIcon from '../Icons/LogoutIcon'
 import { formatCount } from '../../utils/formatCount'
+import { chatStyle } from '../../utils/chroma'
+import { roomLabel } from '../../utils/roomLink'
 
-function ChatListItem({ chat, lastMessage, active, leaving, query, onClick, onPin, onMute, onRestrict, onUnrestrict, onDelete }) {
+function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
     const [menu, setMenu] = useState(null)
     const itemRef = useRef(null)
 
@@ -24,9 +27,14 @@ function ChatListItem({ chat, lastMessage, active, leaving, query, onClick, onPi
         onMute && (chat.muted ? { label: 'Unmute', Icon: UnmuteIcon, onClick: onMute } : { label: 'Mute', Icon: MuteIcon, onClick: onMute }),
         onRestrict && { label: 'Restrict', Icon: RestrictIcon, onClick: onRestrict },
         onUnrestrict && { label: 'Unrestrict', Icon: RestrictIcon, onClick: onUnrestrict },
-        { label: 'Copy ID', Icon: CopyIcon, onClick: () => navigator.clipboard?.writeText(chat.peerId).catch(() => {}) },
-        { label: 'Delete Chat', Icon: DeleteIcon, danger: true, onClick: onDelete },
+        !chat.kind && { label: 'Copy ID', Icon: CopyIcon, onClick: () => navigator.clipboard?.writeText(chat.peerId).catch(() => {}) },
+        onLeave && { label: `Leave ${roomLabel(chat.kind)}`, Icon: LogoutIcon, danger: true, onClick: onLeave },
+        onDelete && { label: chat.kind ? `Delete ${roomLabel(chat.kind)}` : 'Delete Chat', Icon: DeleteIcon, danger: true, onClick: onDelete },
     ].filter(Boolean)
+
+    const senderPrefix = chat.kind === 'group' && lastMessage?.senderId
+        ? `${lastMessage.mine ? 'You' : lastMessage.senderName || 'Deleted Account'}: `
+        : ''
 
     const openMenu = (e) => {
         e.preventDefault()
@@ -37,10 +45,12 @@ function ChatListItem({ chat, lastMessage, active, leaving, query, onClick, onPi
         <div
             className={[active ? styles.itemActive : styles.item, leaving && styles.leaving].filter(Boolean).join(' ')}
             ref={itemRef}
+            data-chat-id={chat.id}
+            style={{ ...chatStyle(chat), '--i': Math.min(index, 12) }}
             onClick={onClick}
-            onContextMenu={onDelete ? openMenu : undefined}
+            onContextMenu={onDelete || onLeave ? openMenu : undefined}
         >
-            <Avatar name={chat.name} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+            <Avatar name={chat.name} photo={chat.photo} size={52} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
             <div className={styles.info}>
                 <div className={styles.top}>
                     <span className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>
@@ -50,7 +60,7 @@ function ChatListItem({ chat, lastMessage, active, leaving, query, onClick, onPi
                     <span className={styles.time}>{lastMessage ? lastMessage.time : ''}</span>
                 </div>
                 <div className={styles.bottom}>
-                    <div className={styles.lastMessage}>{lastMessage ? <HighlightText text={lastMessage.text} query={query} /> : ''}</div>
+                    <div className={styles.lastMessage}>{lastMessage ? <HighlightText text={`${senderPrefix}${lastMessage.text}`} query={query} /> : ''}</div>
                     {chat.unreadCount > 0 && <span className={chat.muted ? `${styles.unread} ${styles.unreadMuted}` : styles.unread}>{formatCount(chat.unreadCount)}</span>}
                     {chat.unreadCount === 0 && chat.pinned && <span className={styles.pinnedMark}><PinIcon /></span>}
                 </div>

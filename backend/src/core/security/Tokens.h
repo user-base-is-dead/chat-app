@@ -18,4 +18,5 @@ std::string createAccessToken(int64_t userId, int64_t deviceId);
 std::optional<AccessClaims> verifyAccessToken(const std::string &token);
 std::string createRefreshToken();
 std::string hashRefreshToken(const std::string &token);
+std::string randomHex(size_t bytes);
 }

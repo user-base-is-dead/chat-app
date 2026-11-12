@@ -5,10 +5,12 @@ import CloseIcon from '../Icons/CloseIcon'
 import BackIcon from '../Icons/BackIcon'
 import MuteIcon from '../Icons/MuteIcon'
 import UnmuteIcon from '../Icons/UnmuteIcon'
+import RestrictIcon from '../Icons/RestrictIcon'
 import DeleteIcon from '../Icons/DeleteIcon'
-import { peerStatus } from '../../utils/lastSeen'
+import PeerStatus from '../PeerStatus/PeerStatus'
+import { chatStyle } from '../../utils/chroma'
 
-function UserInfo({ chat, typing, onClose, onToggleMute, onDelete }) {
+function UserInfo({ chat, typing, onClose, onToggleMute, onRestrict, onUnrestrict, onDelete }) {
     const [copied, setCopied] = useState(null)
     const hidden = chat.peerDisabled || chat.peerDeleted
 
@@ -23,7 +25,7 @@ function UserInfo({ chat, typing, onClose, onToggleMute, onDelete }) {
     }
 
     return (
-        <aside className={styles.panel}>
+        <aside className={styles.panel} style={chatStyle(chat)}>
             <div className={styles.top}>
                 <button className={styles.back} type="button" aria-label="Back" onClick={onClose}>
                     <BackIcon />
@@ -35,10 +37,12 @@ function UserInfo({ chat, typing, onClose, onToggleMute, onDelete }) {
             </div>
             <div className={styles.body}>
                 <div className={styles.hero}>
-                    <Avatar name={chat.name} size={110} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+                    <Avatar name={chat.name} size={104} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
                     <div className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>{chat.name}</div>
-                    {peerStatus(chat, typing) && (
-                        <div className={typing || chat.peerOnline ? `${styles.status} ${styles.statusActive}` : styles.status}>{peerStatus(chat, typing)}</div>
+                    {!chat.peerDeleted && (
+                        <div className={styles.status}>
+                            <PeerStatus key={chat.id} chat={chat} typing={typing} centered />
+                        </div>
                     )}
                 </div>
                 <div className={styles.card}>
@@ -69,6 +73,18 @@ function UserInfo({ chat, typing, onClose, onToggleMute, onDelete }) {
                         {chat.muted ? <UnmuteIcon /> : <MuteIcon />}
                         {chat.muted ? 'Unmute' : 'Mute'}
                     </button>
+                    {chat.status === 'active' && (
+                        <button className={styles.action} type="button" onClick={onRestrict}>
+                            <RestrictIcon />
+                            Restrict
+                        </button>
+                    )}
+                    {chat.status === 'restricted' && (
+                        <button className={styles.action} type="button" onClick={onUnrestrict}>
+                            <RestrictIcon />
+                            Unrestrict
+                        </button>
+                    )}
                     <button className={`${styles.action} ${styles.danger}`} type="button" onClick={onDelete}>
                         <DeleteIcon />
                         Delete Chat

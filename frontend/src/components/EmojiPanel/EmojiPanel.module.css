@@ -7,9 +7,11 @@
     height: 430px;
     display: flex;
     flex-direction: column;
-    border-radius: 18px;
+    border-radius: var(--radius-card);
     background: var(--panel);
-    box-shadow: var(--shadow);
+    --surface: var(--surface-base);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lift);
     overflow: hidden;
     z-index: 20;
     transform-origin: bottom right;
@@ -81,7 +83,7 @@
     height: 40px;
     margin: 4px 10px 2px;
     padding: 0 14px;
-    border-radius: 20px;
+    border-radius: 999px;
     background: var(--surface);
     color: var(--text-muted);
     flex-shrink: 0;
