@@ -258,7 +258,9 @@ drogon::Task<drogon::HttpResponsePtr> RoomController::members(drogon::HttpReques
     try
     {
         const auto offset = std::max(0, std::atoi(request->getParameter("offset").c_str()));
-        const auto list = co_await service_.members(parseId(chatId, "chatId"), currentUserId(request), offset);
+        const auto channel = request->getParameter("channel");
+        const auto list = co_await service_.members(
+            parseId(chatId, "chatId"), currentUserId(request), offset, channel.empty() ? 0 : parseId(channel, "channel"));
         Json::Value body(Json::arrayValue);
         for (const auto &member : list)
             body.append(toJson(member));

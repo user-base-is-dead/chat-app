@@ -14,7 +14,7 @@ const char *const kSummarySelect =
     "(extract(epoch FROM me.pinned_at) * 1000)::bigint AS pinned_at, "
     "peer.last_read_message_id AS peer_last_read, peer.status AS peer_status, "
     "u.id AS peer_id, u.username AS peer_username, u.display_name AS peer_display_name, u.bio AS peer_bio, "
-    "(extract(epoch FROM u.last_seen_at) * 1000)::bigint AS peer_last_seen, u.disabled_at IS NOT NULL AS peer_disabled, u.deleted_at IS NOT NULL AS peer_deleted, "
+    "(extract(epoch FROM u.last_seen_at) * 1000)::bigint AS peer_last_seen, u.disabled_at IS NOT NULL AS peer_disabled, u.deleted_at IS NOT NULL AS peer_deleted, u.show_last_seen AS peer_shows_last_seen, "
     "(SELECT count(*) FROM messages um WHERE um.chat_id = me.chat_id AND um.id > me.last_read_message_id "
     "AND um.sender_id <> me.user_id) AS unread_count, "
     "lm.id AS lm_id, lm.chat_id AS lm_chat_id, lm.sender_id AS lm_sender_id, lm.sender_name AS lm_sender_name, lm.ciphertext AS lm_ciphertext, "
@@ -52,10 +52,11 @@ ChatSummary summaryFromRow(const drogon::orm::Row &row)
         row["muted"].as<bool>(),
         row["peer_disabled"].as<bool>(),
         row["peer_deleted"].as<bool>(),
+        row["peer_shows_last_seen"].as<bool>(),
     };
     if (!summary.peerVisible)
         summary.peerLastReadId = 0;
-    if (!summary.peerVisible || summary.peerDisabled || summary.peerDeleted)
+    if (!summary.peerVisible || summary.peerDisabled || summary.peerDeleted || !summary.peerShowsLastSeen)
         summary.peerLastSeenAt = std::nullopt;
     if (!row["lm_id"].isNull())
         summary.lastMessage = messages::messageFromRow(row, "lm_");

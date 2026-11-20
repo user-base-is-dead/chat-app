@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -306,6 +307,8 @@ fun MainScreen(
                     actionsFor = roomActions,
                     onOpenChat = openChat,
                     onOpenMessage = { model.openChat(it, user, focusId = it.lastId) },
+                    onOpenChannel = { group, channel -> model.openChannel(group, channel, user) },
+                    onNewGroup = { createKind = "group" },
                 )
                 Pane.Channels -> RoomsScreen(
                     title = "Channels",
@@ -379,6 +382,12 @@ fun MainScreen(
         )
     }
 
+    LaunchedEffect(model.notice) {
+        val text = model.notice ?: return@LaunchedEffect
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        model.notice = null
+    }
+
     model.joining?.let { state ->
         JoinPrompt(state, onJoin = { model.confirmJoin(user) }, onClose = model::closeJoin)
     }
@@ -402,6 +411,8 @@ fun MainScreen(
             ChatScreen(
                 room = shownRoom,
                 chat = shownChat,
+                channelName = if (shownChat.kind == "group") model.openChannelName ?: "general" else null,
+                selfName = user.displayName.ifEmpty { user.username },
                 onBack = model::closeChat,
                 onSearch = {
                     model.closeChat()
@@ -419,6 +430,12 @@ fun MainScreen(
                 onSearchPeople = model::searchUsers,
                 onRoomChanged = model::refreshNow,
                 onLeave = { model.askLeave(shownChat) },
+                presence = model.presence,
+                channelPermissions = if (shownChat.kind == "group") {
+                    model.channelLists[shownChat.id]?.channels?.firstOrNull { it.id == shownRoom.chatId }?.permissions
+                } else {
+                    null
+                },
             )
         }
     }
@@ -440,7 +457,7 @@ private fun FindButton(onChoose: (FindKind) -> Unit, onCreate: (String) -> Unit,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_search),
-                contentDescription = "Search or create",
+                contentDescription = "Global search",
                 tint = OnFab,
                 modifier = Modifier.size(26.dp),
             )
@@ -463,6 +480,14 @@ private fun FindButton(onChoose: (FindKind) -> Unit, onCreate: (String) -> Unit,
                     },
                 )
             }
+            HorizontalDivider(color = BubbleBorder, modifier = Modifier.padding(top = 4.dp))
+            Text(
+                text = "Global Search",
+                color = InkMuted,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp),
+            )
             FindKind.entries.forEach { kind ->
                 DropdownMenuItem(
                     text = { Text(kind.title, color = Ink) },

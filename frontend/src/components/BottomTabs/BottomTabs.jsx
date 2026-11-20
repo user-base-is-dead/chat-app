@@ -31,7 +31,7 @@ function BottomTabs({ user, activeTab, onChange }) {
                 </button>
             ))}
             <button
-                className={activeTab === 'settings' ? `${styles.me} ${styles.meActive}` : styles.me}
+                className={styles.me}
                 type="button"
                 aria-label="Settings"
                 onClick={() => onChange('settings')}

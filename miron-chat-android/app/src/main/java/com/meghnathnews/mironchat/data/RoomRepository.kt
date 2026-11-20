@@ -25,7 +25,12 @@ data class RoomMember(
     val status: String,
     val disabled: Boolean,
     val deleted: Boolean,
+    val online: Boolean = false,
+    val lastSeenHidden: Boolean = false,
+    val roleIds: List<String> = emptyList(),
 )
+
+data class Presence(val online: Boolean, val hidden: Boolean, val at: Long)
 
 data class AddResult(val added: Int, val invited: Int, val skipped: Int)
 
@@ -100,8 +105,8 @@ class RoomRepository(private val api: ApiClient, private val chats: ChatReposito
         api.authorized("/rooms/$roomId/transfer", "POST", JSONObject().put("userId", userId))
     }
 
-    suspend fun members(roomId: String, offset: Int = 0): List<RoomMember> {
-        val items = api.authorizedList("/rooms/$roomId/members?offset=$offset")
+    suspend fun members(roomId: String, offset: Int = 0, channelId: String? = null): List<RoomMember> {
+        val items = api.authorizedList("/rooms/$roomId/members?offset=$offset" + if (channelId != null) "&channel=$channelId" else "")
         return List(items.length()) {
             val member = items.getJSONObject(it)
             val deleted = member.optBoolean("deleted")
@@ -113,6 +118,9 @@ class RoomRepository(private val api: ApiClient, private val chats: ChatReposito
                 status = member.optString("status"),
                 disabled = member.optBoolean("disabled"),
                 deleted = deleted,
+                online = member.optBoolean("online"),
+                lastSeenHidden = member.optBoolean("lastSeenHidden"),
+                roleIds = member.optJSONArray("roleIds")?.let { ids -> List(ids.length()) { ids.getString(it) } }.orEmpty(),
             )
         }
     }

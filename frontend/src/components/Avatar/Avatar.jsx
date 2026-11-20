@@ -1,7 +1,7 @@
 import styles from './Avatar.module.css'
 import DisabledUserIcon from '../Icons/DisabledUserIcon'
 import DeletedUserIcon from '../Icons/DeletedUserIcon'
-import { chromaFor } from '../../utils/chroma'
+import PersonIcon from '../Icons/PersonIcon'
 
 function Avatar({ name, photo, size = 54, disabled, deleted, morphTarget }) {
     const marks = { 'data-avatar': '', 'data-morph-target': morphTarget ? '' : undefined }
@@ -23,12 +23,8 @@ function Avatar({ name, photo, size = 54, disabled, deleted, morphTarget }) {
     }
 
     return (
-        <div
-            className={styles.avatar}
-            style={{ width: size, height: size, fontSize: size * 0.42, background: chromaFor(name) }}
-            {...marks}
-        >
-            {photo ? <img src={photo} alt="" draggable="false" /> : name[0]}
+        <div className={`${styles.avatar} ${styles.blank}`} style={{ width: size, height: size }} aria-label={name} {...marks}>
+            {photo ? <img src={photo} alt="" draggable="false" /> : <PersonIcon />}
         </div>
     )
 }

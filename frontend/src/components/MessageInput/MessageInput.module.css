@@ -20,14 +20,8 @@
     padding: 0 6px;
     border-radius: 999px;
     background: var(--panel);
-    border: 1px solid var(--border-strong);
     flex-shrink: 0;
-    transition: border-color 0.2s, background 0.2s;
-}
-
-.bar:focus-within {
-    border-color: color-mix(in srgb, var(--chroma) 45%, transparent);
-    background: var(--panel);
+    transition: background 0.2s;
 }
 
 .iconButton,

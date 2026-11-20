@@ -120,6 +120,29 @@ drogon::Task<int64_t> UserRepository::touchLastSeen(int64_t id)
     co_return result.empty() ? 0 : result[0]["last_seen"].as<int64_t>();
 }
 
+drogon::Task<std::optional<bool>> UserRepository::showsLastSeen(int64_t id)
+{
+    const auto result =
+        co_await core::database::client()->execSqlCoro("SELECT show_last_seen FROM users WHERE id = $1", id);
+    if (result.empty())
+        co_return std::nullopt;
+    co_return result[0]["show_last_seen"].as<bool>();
+}
+
+drogon::Task<> UserRepository::setShowLastSeen(int64_t id, bool show)
+{
+    co_await core::database::client()->execSqlCoro("UPDATE users SET show_last_seen = $2 WHERE id = $1", id, show);
+}
+
+drogon::Task<std::optional<int64_t>> UserRepository::lastSeenAt(int64_t id)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT (extract(epoch FROM last_seen_at) * 1000)::bigint AS last_seen FROM users WHERE id = $1", id);
+    if (result.empty() || result[0]["last_seen"].isNull())
+        co_return std::nullopt;
+    co_return result[0]["last_seen"].as<int64_t>();
+}
+
 drogon::Task<std::optional<User>> UserRepository::updateProfile(int64_t id,
                                                                std::string username,
                                                                std::string displayName,
@@ -173,7 +196,9 @@ drogon::Task<> UserRepository::deleteAccount(int64_t id)
         "JOIN rooms r ON r.chat_id = o.chat_id "
         "JOIN chat_members m ON m.chat_id = o.chat_id AND m.user_id <> $1 AND m.status = 'active' "
         "WHERE o.user_id = $1 AND o.role = 'owner' "
-        "ORDER BY o.chat_id, m.role = 'admin' DESC, m.joined_at, m.user_id) heir "
+        "ORDER BY o.chat_id, m.role = 'admin' DESC, (SELECT min(rr.position) FROM member_roles mr "
+        "JOIN room_roles rr ON rr.id = mr.role_id WHERE mr.room_id = o.chat_id AND mr.user_id = m.user_id) NULLS LAST, "
+        "m.joined_at, m.user_id) heir "
         "WHERE cm.chat_id = heir.chat_id AND cm.user_id = heir.user_id",
         id);
     co_await transaction->execSqlCoro(
@@ -183,6 +208,7 @@ drogon::Task<> UserRepository::deleteAccount(int64_t id)
         id);
     co_await transaction->execSqlCoro(
         "DELETE FROM chat_members cm USING rooms r WHERE r.chat_id = cm.chat_id AND cm.user_id = $1", id);
+    co_await transaction->execSqlCoro("DELETE FROM member_roles WHERE user_id = $1", id);
     co_await transaction->execSqlCoro("DELETE FROM devices WHERE user_id = $1", id);
     co_await transaction->execSqlCoro(
         "DELETE FROM media m WHERE m.owner_id = $1 AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.photo_id = m.id)", id);

@@ -1,0 +1,84 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(8, 8, 10, 0.4);
+}
+
+.dialog {
+    width: 100%;
+    max-width: 380px;
+    padding: 28px 24px 20px;
+    border-radius: var(--radius-sheet);
+    background: var(--panel);
+    --surface: var(--surface-base);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lift);
+}
+
+.title {
+    margin: 0 0 18px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+}
+
+.hint {
+    min-height: 20px;
+    margin: 8px 2px 20px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    word-break: break-word;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.cancel,
+.save {
+    flex: 1;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cancel {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.cancel:hover {
+    background: var(--surface-strong);
+}
+
+.save {
+    background: var(--accent);
+    color: #FFFFFF;
+}
+
+.save:disabled {
+    background: var(--surface-strong);
+    color: var(--text-muted);
+    cursor: default;
+}

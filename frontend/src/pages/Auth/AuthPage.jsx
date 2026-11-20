@@ -67,7 +67,7 @@ function AuthPage({ onLogin }) {
             }
             const user = await login(username.trim(), password)
             setLeaving(true)
-            setTimeout(() => onLogin(user), 700)
+            onLogin(user)
         } catch (err) {
             showError(err.message)
         } finally {
@@ -84,7 +84,7 @@ function AuthPage({ onLogin }) {
                 </div>
                 <img className={styles.brandLogo} src={logo} alt="" />
                 <p className={styles.brandLine}>
-                    Every chat<br />has its own<br /><span className={styles.brandColor}>color.</span>
+                    Simple chats<br />with your<br /><span className={styles.brandColor}>people.</span>
                 </p>
             </section>
             <div className={styles.formSide}>

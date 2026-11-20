@@ -33,7 +33,13 @@ class ChatService
 
     drogon::Task<std::vector<messages::Message>> messages(int64_t chatId, int64_t userId, int64_t beforeId, int limit);
     drogon::Task<std::vector<messages::Message>> messagesAfter(int64_t chatId, int64_t userId, int64_t afterId, int limit);
-    drogon::Task<messages::Message> send(int64_t chatId, int64_t userId, int64_t deviceId, std::string ciphertext);
+    drogon::Task<messages::Message> send(int64_t chatId,
+                                         int64_t userId,
+                                         int64_t deviceId,
+                                         std::string ciphertext,
+                                         bool allowReactions = true,
+                                         bool allowComments = true);
+    drogon::Task<bool> isChannel(int64_t chatId, int64_t userId);
     drogon::Task<messages::Message> edit(int64_t chatId, int64_t userId, int64_t messageId, std::string ciphertext);
     drogon::Task<bool> deleteMessage(int64_t chatId, int64_t userId, int64_t messageId);
     drogon::Task<> markRead(int64_t chatId, int64_t userId, int64_t messageId);

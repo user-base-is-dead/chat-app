@@ -58,8 +58,8 @@ export function transferRoom(roomId, userId) {
 
 export const MEMBER_PAGE_SIZE = 100
 
-export function listMembers(roomId, offset = 0) {
-    return authorized(`/rooms/${roomId}/members?offset=${offset}`)
+export function listMembers(roomId, offset = 0, channelId = null) {
+    return authorized(`/rooms/${roomId}/members?offset=${offset}${channelId ? `&channel=${channelId}` : ''}`)
 }
 
 export function addMembers(roomId, userIds) {

@@ -1,5 +1,11 @@
 package com.meghnathnews.mironchat.ui.chat
 
+import com.meghnathnews.mironchat.data.REACTIONS
+import com.meghnathnews.mironchat.data.PostStats
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -87,11 +93,20 @@ fun MessageBubble(
     firstOfSender: Boolean = false,
     hideTicks: Boolean = false,
     canDelete: Boolean = true,
+    channelName: String? = null,
+    channelPhoto: String = "",
+    stats: PostStats? = null,
+    canManagePosts: Boolean = false,
+    onReact: (String) -> Unit = {},
+    onOpenComments: () -> Unit = {},
+    onTogglePostSwitch: (Boolean) -> Unit = {},
     onCopy: () -> Unit,
     onResend: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val mine = message.mine
+    val post = channelName != null && message.state == SendState.Sent
+    val mine = message.mine && channelName == null
+    val senderLabel = channelName ?: message.senderName.ifEmpty { "Deleted Account" }
     var menuOpen by remember { mutableStateOf(false) }
     val appear = remember { Animatable(if (animateIn) 0f else 1f) }
     val ring by animateFloatAsState(
@@ -141,13 +156,13 @@ fun MessageBubble(
         Row(verticalAlignment = Alignment.Bottom) {
         if (showSender) {
             Box(modifier = Modifier.padding(end = 10.dp).size(32.dp)) {
-                if (groupEnd) Avatar(message.senderName.ifEmpty { "Deleted Account" }, 32.dp)
+                if (groupEnd) Avatar(senderLabel, 32.dp, photo = channelPhoto)
             }
         }
         Box {
             Column(
                 modifier = Modifier
-                    .widthIn(max = maxWidth)
+                    .then(if (post) Modifier.width(maxWidth) else Modifier.widthIn(max = maxWidth))
                     .drawWithContent {
                         drawContent()
                         if (groupEnd) drawTail(mine)
@@ -167,13 +182,16 @@ fun MessageBubble(
             ) {
                 if (showSender && firstOfSender) {
                     Text(
-                        text = message.senderName.ifEmpty { "Deleted Account" },
+                        text = senderLabel,
                         color = Chroma,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
-                Row(
+                if (post) {
+                    Text(text = message.text, color = Ink, fontSize = 15.sp, lineHeight = 21.sp)
+                    PostFooter(stats, message.createdAt, onReact, onOpenComments)
+                } else Row(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -203,6 +221,25 @@ fun MessageBubble(
                 shape = RoundedCornerShape(18.dp),
                 containerColor = Panel,
             ) {
+                if (post && stats?.allowReactions == true) {
+                    Row(modifier = Modifier.padding(horizontal = 6.dp)) {
+                        REACTIONS.forEach { emoji ->
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(if (stats.myReaction == emoji) Chroma.copy(alpha = 0.22f) else Color.Transparent)
+                                    .clickable {
+                                        menuOpen = false
+                                        onReact(emoji)
+                                    },
+                            ) {
+                                Text(emoji, fontSize = 22.sp)
+                            }
+                        }
+                    }
+                }
                 if (message.state == SendState.Failed) {
                     Text(
                         text = "Message not sent",
@@ -220,6 +257,16 @@ fun MessageBubble(
                     SendState.Sent -> MenuItem("Copy") {
                         menuOpen = false
                         onCopy()
+                    }
+                }
+                if (post && canManagePosts && stats != null) {
+                    MenuItem(if (stats.allowReactions) "Turn off reactions" else "Turn on reactions") {
+                        menuOpen = false
+                        onTogglePostSwitch(true)
+                    }
+                    MenuItem(if (stats.allowComments) "Turn off comments" else "Turn on comments") {
+                        menuOpen = false
+                        onTogglePostSwitch(false)
                     }
                 }
                 val deleteLabel = if (message.state == SendState.Sending) "Cancel Sending" else "Delete"

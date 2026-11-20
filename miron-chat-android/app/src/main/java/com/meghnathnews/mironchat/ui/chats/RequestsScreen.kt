@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.chats
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -93,7 +95,8 @@ private fun RequestTabs(showRestricted: Boolean, onChange: (Boolean) -> Unit) {
                 .width(tabWidth)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(7.dp))
-                .background(Card),
+                .background(Card)
+                .border(1.dp, BubbleBorder, RoundedCornerShape(7.dp)),
         )
         Row(modifier = Modifier.fillMaxSize()) {
             listOf(false to "Message Requests", true to "Restricted").forEach { (restricted, label) ->

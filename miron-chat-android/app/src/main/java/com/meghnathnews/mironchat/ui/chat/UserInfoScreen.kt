@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.chat
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -146,6 +148,7 @@ fun UserInfoScreen(
                     }
                     .clip(CircleShape)
                     .background(Panel)
+                    .border(1.dp, BubbleBorder, CircleShape)
                     .padding(6.dp),
             ) {
                 Avatar(

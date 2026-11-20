@@ -1,5 +1,6 @@
 package com.meghnathnews.mironchat.ui.settings
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -223,6 +224,7 @@ fun ProfileSettings(user: User, onBack: () -> Unit, onSaved: (User) -> Unit) {
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(Card)
+                    .border(1.dp, BubbleBorder, RoundedCornerShape(12.dp))
                     .clickable {
                         copyText(context, user.id)
                         copied = true

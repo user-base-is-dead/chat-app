@@ -163,8 +163,14 @@ drogon::Task<drogon::HttpResponsePtr> ChatController::messages(drogon::HttpReque
             list = co_await service_.messagesAfter(
                 id, currentUserId(request), afterParam == "0" ? 0 : parseId(afterParam, "after"), limit);
         Json::Value body(Json::arrayValue);
+        const bool channel = co_await service_.isChannel(id, currentUserId(request));
         for (const auto &message : list)
-            body.append(messages::toJson(message));
+        {
+            auto json = messages::toJson(message);
+            if (channel && message.senderId != currentUserId(request))
+                rooms::hideSender(json);
+            body.append(json);
+        }
         co_return jsonResponse(body);
     }
     catch (const ApiError &error)
@@ -181,7 +187,9 @@ drogon::Task<drogon::HttpResponsePtr> ChatController::send(drogon::HttpRequestPt
         auto message = co_await service_.send(parseId(chatId, "chatId"),
                                               currentUserId(request),
                                               currentDeviceId(request),
-                                              stringField(body, "ciphertext"));
+                                              stringField(body, "ciphertext"),
+                                              !body["allowReactions"].isBool() || body["allowReactions"].asBool(),
+                                              !body["allowComments"].isBool() || body["allowComments"].asBool());
         co_return jsonResponse(messages::toJson(message), drogon::k201Created);
     }
     catch (const ApiError &error)

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './ContextMenu.module.css'
 
-function ContextMenu({ x, y, title, items, onClose }) {
+function ContextMenu({ x, y, title, header, items, onClose }) {
     const menuRef = useRef(null)
     const [position, setPosition] = useState({ left: x, top: y })
 
@@ -35,6 +35,7 @@ function ContextMenu({ x, y, title, items, onClose }) {
     return createPortal(
         <div ref={menuRef} className={styles.menu} style={position} role="menu" onClick={(e) => e.stopPropagation()} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
             {title && <p className={styles.title}>{title}</p>}
+            {header?.(onClose)}
             {items.map(({ label, Icon, danger, onClick }) => (
                 <button
                     key={label}

@@ -6,6 +6,7 @@
 #include "core/security/Tokens.h"
 #include "core/text/Text.h"
 #include "features/realtime/Hub.h"
+#include "features/rooms/Authority.h"
 #include "features/users/Username.h"
 
 namespace features::rooms
@@ -35,19 +36,14 @@ ApiError notAllowed()
     return ApiError(drogon::k403Forbidden, "not_allowed", "You do not have permission to do this");
 }
 
-bool isAdminRole(const std::string &role)
+bool canSend(const std::string &kind, const Authority &authority, bool membersCanSend)
 {
-    return role == "owner" || role == "admin";
+    return authority.has("sendAlways") || (kind == "group" && membersCanSend);
 }
 
-bool canSend(const std::string &kind, const std::string &role, bool membersCanSend)
+bool canAdd(const std::string &kind, const Authority &authority, bool membersCanAdd)
 {
-    return isAdminRole(role) || (kind == "group" && membersCanSend);
-}
-
-bool canAdd(const std::string &kind, const std::string &role, bool membersCanAdd)
-{
-    return isAdminRole(role) || (kind == "group" && membersCanAdd);
+    return authority.has("addMembers") || (kind == "group" && membersCanAdd);
 }
 
 Json::Value chatEvent(int64_t chatId)
@@ -62,11 +58,25 @@ void requireReader(const RoomAccess &room)
     if (room.status != "active")
         throw roomNotFound();
 }
+
+void requireViewer(const RoomAccess &room)
+{
+    requireReader(room);
+    if (room.kind == "group" && !room.canInChannel("viewChannel"))
+        throw roomNotFound();
+}
+}
+
+void hideSender(Json::Value &message)
+{
+    message["senderId"] = "0";
+    message["senderName"] = "";
 }
 
 Json::Value toJson(const RoomSummary &room)
 {
     const bool active = room.status == "active";
+    const auto authority = authorityOf(room);
     Json::Value json;
     json["id"] = std::to_string(room.id);
     json["kind"] = room.kind;
@@ -75,13 +85,19 @@ Json::Value toJson(const RoomSummary &room)
     json["username"] = room.username;
     json["isPublic"] = room.isPublic;
     json["photo"] = room.photo;
-    json["inviteCode"] = active && isAdminRole(room.role) ? room.inviteCode : "";
+    json["inviteCode"] = active && authority.has("manageGroup") ? room.inviteCode : "";
     json["membersCanSend"] = room.membersCanSend;
     json["membersCanAdd"] = room.membersCanAdd;
     json["status"] = room.status;
     json["role"] = room.role;
-    json["canSend"] = active && canSend(room.kind, room.role, room.membersCanSend);
-    json["canAdd"] = active && canAdd(room.kind, room.role, room.membersCanAdd);
+    json["canSend"] = active && canSend(room.kind, authority, room.membersCanSend);
+    json["canAdd"] = active && canAdd(room.kind, authority, room.membersCanAdd);
+    json["permissions"] = Json::Value(Json::arrayValue);
+    if (active)
+        for (const auto &key : kPermissionKeys)
+            if (authority.has(key))
+                json["permissions"].append(key);
+    json["rank"] = authority.rank ? Json::Value(*authority.rank) : Json::Value();
     json["lastReadId"] = std::to_string(room.lastReadId);
     json["readUpTo"] = std::to_string(room.kind == "group" ? room.readUpTo : 0);
     json["unreadCount"] = static_cast<Json::Int64>(active ? room.unreadCount : 0);
@@ -89,6 +105,8 @@ Json::Value toJson(const RoomSummary &room)
     json["pinnedAt"] = room.pinnedAt ? Json::Value(static_cast<Json::Int64>(*room.pinnedAt)) : Json::Value();
     json["muted"] = room.muted;
     json["lastMessage"] = active && room.lastMessage ? messages::toJson(*room.lastMessage) : Json::Value();
+    if (room.kind == "channel" && json["lastMessage"].isObject())
+        hideSender(json["lastMessage"]);
     return json;
 }
 
@@ -117,6 +135,12 @@ Json::Value toJson(const RoomMember &member)
     json["status"] = member.status;
     json["disabled"] = member.disabled;
     json["deleted"] = member.deleted;
+    json["roleIds"] = Json::Value(Json::arrayValue);
+    for (const auto id : member.roleIds)
+        json["roleIds"].append(std::to_string(id));
+    json["lastSeenHidden"] = !member.showsLastSeen;
+    json["online"] = member.showsLastSeen && !member.disabled && !member.deleted && member.status == "active" &&
+                     realtime::hub().isOnline(member.id);
     return json;
 }
 
@@ -125,7 +149,10 @@ drogon::Task<> notifyRoomChanged(int64_t chatId)
     const auto data = chatEvent(chatId);
     const auto ids = co_await RoomRepository().allMemberIds(chatId);
     for (const auto id : ids)
+    {
         realtime::hub().send(id, "room.changed", data);
+        realtime::hub().send(id, "room.channels", data);
+    }
 }
 
 drogon::Task<std::vector<RoomSummary>> RoomService::list(int64_t userId)
@@ -173,6 +200,11 @@ drogon::Task<Json::Value> RoomService::create(int64_t userId,
     const auto chatId = core::id::next();
     if (!co_await rooms_.create(chatId, kind, fields, core::security::randomHex(16), userId))
         throw ApiError(drogon::k409Conflict, "username_taken", "This username is already taken");
+    if (kind == "group")
+    {
+        co_await rooms_.addDefaultChannel(chatId);
+        co_await rooms_.addDefaultRole(chatId, core::id::next());
+    }
 
     const auto room = co_await requireRoom(chatId, userId);
     const auto added = co_await addAll(chatId, room, userId, std::move(memberIds));
@@ -193,7 +225,7 @@ drogon::Task<Json::Value> RoomService::detail(int64_t chatId, int64_t userId)
 
 drogon::Task<RoomSummary> RoomService::update(int64_t chatId, int64_t userId, Json::Value body)
 {
-    co_await requireAdmin(chatId, userId);
+    co_await requirePermission(chatId, userId, "manageGroup");
     const auto current = co_await summary(chatId, userId);
     const auto textOr = [&body](const char *name, const std::string &fallback) {
         return body[name].isString() ? body[name].asString() : fallback;
@@ -225,6 +257,7 @@ drogon::Task<> RoomService::remove(int64_t chatId, int64_t userId)
 {
     co_await requireOwner(chatId, userId);
     const auto ids = co_await rooms_.allMemberIds(chatId);
+    co_await rooms_.removeChannels(chatId);
     co_await chats_.remove(chatId);
     const auto data = chatEvent(chatId);
     for (const auto id : ids)
@@ -305,7 +338,7 @@ drogon::Task<RoomSummary> RoomService::setPinned(int64_t chatId, int64_t userId,
 
 drogon::Task<RoomSummary> RoomService::resetInvite(int64_t chatId, int64_t userId)
 {
-    co_await requireAdmin(chatId, userId);
+    co_await requirePermission(chatId, userId, "manageGroup");
     co_await rooms_.setInviteCode(chatId, core::security::randomHex(16));
     co_await notifyRoomChanged(chatId);
     co_return co_await summary(chatId, userId);
@@ -313,23 +346,31 @@ drogon::Task<RoomSummary> RoomService::resetInvite(int64_t chatId, int64_t userI
 
 drogon::Task<> RoomService::transfer(int64_t chatId, int64_t userId, int64_t targetId)
 {
-    co_await requireOwner(chatId, userId);
+    const auto room = co_await requireOwner(chatId, userId);
     if (targetId == userId || !co_await rooms_.memberRole(chatId, targetId))
         throw ApiError(drogon::k400BadRequest, "invalid_member", "Choose a current member");
     co_await rooms_.transfer(chatId, userId, targetId);
+    if (room.kind == "group")
+        co_await rooms_.giveDefaultRole(chatId, userId);
     co_await notifyRoomChanged(chatId);
 }
 
-drogon::Task<std::vector<RoomMember>> RoomService::members(int64_t chatId, int64_t userId, int64_t offset)
+drogon::Task<std::vector<RoomMember>> RoomService::members(int64_t chatId, int64_t userId, int64_t offset, int64_t channelId)
 {
     co_await requireActive(chatId, userId);
-    co_return co_await rooms_.members(chatId, kMembersPage, offset);
+    if (channelId != 0)
+    {
+        const auto channel = co_await rooms_.access(channelId, userId);
+        if (!channel || channel->roomId != chatId || !channel->canInChannel("viewChannel"))
+            throw roomNotFound();
+    }
+    co_return co_await rooms_.members(chatId, kMembersPage, offset, channelId);
 }
 
 drogon::Task<AddResult> RoomService::addMembers(int64_t chatId, int64_t userId, std::vector<int64_t> ids)
 {
     const auto room = co_await requireActive(chatId, userId);
-    if (!canAdd(room.kind, room.role, room.membersCanAdd))
+    if (!canAdd(room.kind, authorityOf(room), room.membersCanAdd))
         throw notAllowed();
     if (ids.size() > kMaxAddAtOnce)
         throw ApiError(drogon::k400BadRequest, "too_many", "You can add up to 50 people at once");
@@ -347,7 +388,7 @@ drogon::Task<AddResult> RoomService::addAll(int64_t chatId, RoomAccess room, int
         const auto account = co_await users_.findCredentialsById(id);
         const bool banned = co_await rooms_.isBanned(chatId, id);
         if (id == userId || !account || account->deleted || account->disabled ||
-            co_await rooms_.restrictedBy(id, userId) || (banned && !isAdminRole(room.role)))
+            co_await rooms_.restrictedBy(id, userId) || (banned && !authorityOf(room).has("removeMembers")))
         {
             ++result.skipped;
             continue;
@@ -367,7 +408,9 @@ drogon::Task<AddResult> RoomService::addAll(int64_t chatId, RoomAccess room, int
 
 drogon::Task<> RoomService::setRole(int64_t chatId, int64_t userId, int64_t targetId, std::string role)
 {
-    co_await requireOwner(chatId, userId);
+    const auto room = co_await requireOwner(chatId, userId);
+    if (room.kind == "group")
+        throw ApiError(drogon::k409Conflict, "use_roles", "Use roles to change what members can do");
     if (role != "admin" && role != "member")
         throw ApiError(drogon::k400BadRequest, "invalid_role", "Unknown role");
     if (!co_await rooms_.memberRole(chatId, targetId))
@@ -378,11 +421,12 @@ drogon::Task<> RoomService::setRole(int64_t chatId, int64_t userId, int64_t targ
 
 drogon::Task<> RoomService::removeMember(int64_t chatId, int64_t userId, int64_t targetId)
 {
-    const auto room = co_await requireAdmin(chatId, userId);
+    const auto room = co_await requirePermission(chatId, userId, "removeMembers");
     const auto target = co_await rooms_.access(chatId, targetId);
     if (!target || target->status.empty() || targetId == userId)
         throw ApiError(drogon::k400BadRequest, "invalid_member", "Choose a current member");
-    if (target->role == "owner" || (target->role == "admin" && room.role != "owner"))
+    const auto targetAuthority = authorityOf(*target);
+    if (!authorityOf(room).outranks(targetAuthority.owner, targetAuthority.rank))
         throw notAllowed();
     co_await rooms_.removeMember(chatId, targetId);
     co_await rooms_.ban(chatId, targetId);
@@ -394,14 +438,24 @@ drogon::Task<messages::Message> RoomService::send(int64_t chatId,
                                                   RoomAccess room,
                                                   int64_t userId,
                                                   int64_t deviceId,
-                                                  std::string ciphertext)
+                                                  std::string ciphertext,
+                                                  bool allowReactions,
+                                                  bool allowComments)
 {
-    requireReader(room);
-    if (!canSend(room.kind, room.role, room.membersCanSend))
+    requireViewer(room);
+    const bool allowed = room.kind == "group" ? room.canInChannel("sendMessages") : canSend(room.kind, authorityOf(room), room.membersCanSend);
+    if (!allowed)
         throw ApiError(drogon::k403Forbidden, "cannot_send", "You cannot send messages here");
-    auto message = co_await messages_.insert(core::id::next(), chatId, userId, deviceId, ciphertext);
-    co_await chats_.markRead(chatId, userId, message.id);
-    co_await broadcast(chatId, "message.new", messages::toJson(message));
+    auto message = co_await messages_.insert(
+        core::id::next(), chatId, userId, deviceId, ciphertext, allowReactions, allowComments);
+    if (room.roomId != chatId)
+        co_await rooms_.markChannelRead(chatId, userId, message.id);
+    else
+        co_await chats_.markRead(chatId, userId, message.id);
+    if (room.kind == "channel")
+        co_await broadcastPost(chatId, userId, "message.new", messages::toJson(message));
+    else
+        co_await broadcast(chatId, "message.new", messages::toJson(message));
     co_return message;
 }
 
@@ -411,22 +465,32 @@ drogon::Task<messages::Message> RoomService::edit(int64_t chatId,
                                                   int64_t messageId,
                                                   std::string ciphertext)
 {
-    requireReader(room);
+    requireViewer(room);
     auto message = co_await messages_.edit(chatId, messageId, userId, ciphertext);
     if (!message)
         throw ApiError(drogon::k404NotFound, "message_not_found", "Message not found");
-    co_await broadcast(chatId, "message.edited", messages::toJson(*message));
+    if (room.kind == "channel")
+        co_await broadcastPost(chatId, userId, "message.edited", messages::toJson(*message));
+    else
+        co_await broadcast(chatId, "message.edited", messages::toJson(*message));
     co_return *message;
 }
 
 drogon::Task<> RoomService::deleteMessage(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId)
 {
-    requireReader(room);
+    requireViewer(room);
     const auto sender = co_await rooms_.messageSender(chatId, messageId);
     if (!sender)
         throw ApiError(drogon::k404NotFound, "message_not_found", "Message not found");
-    if (*sender != userId && !isAdminRole(room.role))
-        throw notAllowed();
+    if (*sender != userId)
+    {
+        const auto authority = authorityOf(room);
+        const bool allowed = room.kind == "group" ? room.canInChannel("deleteMessages") : authority.has("deleteMessages");
+        if (!allowed)
+            throw notAllowed();
+        if (room.kind == "group" && !authority.owner && co_await rooms_.memberRole(room.roomId, *sender) == "owner")
+            throw notAllowed();
+    }
     co_await messages_.remove(chatId, messageId);
 
     auto data = chatEvent(chatId);
@@ -436,10 +500,15 @@ drogon::Task<> RoomService::deleteMessage(int64_t chatId, RoomAccess room, int64
 
 drogon::Task<> RoomService::markRead(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId)
 {
-    requireReader(room);
-    co_await chats_.markRead(chatId, userId, messageId);
+    requireViewer(room);
+    if (room.roomId != chatId)
+        co_await rooms_.markChannelRead(chatId, userId, messageId);
+    else
+        co_await chats_.markRead(chatId, userId, messageId);
 
     auto data = chatEvent(chatId);
+    if (room.roomId != chatId)
+        data["roomId"] = std::to_string(room.roomId);
     data["userId"] = std::to_string(userId);
     data["upToMessageId"] = std::to_string(messageId);
     realtime::hub().send(userId, "message.read", data);
@@ -453,15 +522,28 @@ drogon::Task<> RoomService::markRead(int64_t chatId, RoomAccess room, int64_t us
 drogon::Task<> RoomService::broadcast(int64_t chatId, std::string event, Json::Value data)
 {
     data["room"] = true;
-    const auto ids = co_await rooms_.activeMemberIds(chatId);
+    const auto roomId = co_await rooms_.roomIdOf(chatId);
+    if (roomId != chatId)
+        data["roomId"] = std::to_string(roomId);
+    const auto ids = co_await rooms_.viewerIds(roomId, chatId);
     for (const auto id : ids)
         realtime::hub().send(id, event, data);
+}
+
+drogon::Task<> RoomService::broadcastPost(int64_t chatId, int64_t senderId, std::string event, Json::Value data)
+{
+    data["room"] = true;
+    auto hidden = data;
+    hideSender(hidden);
+    const auto ids = co_await rooms_.activeMemberIds(chatId);
+    for (const auto id : ids)
+        realtime::hub().send(id, event, id == senderId ? data : hidden);
 }
 
 drogon::Task<RoomAccess> RoomService::requireRoom(int64_t chatId, int64_t userId)
 {
     auto room = co_await rooms_.access(chatId, userId);
-    if (!room || room->status.empty())
+    if (!room || room->status.empty() || room->roomId != chatId)
         throw roomNotFound();
     co_return *room;
 }
@@ -473,10 +555,10 @@ drogon::Task<RoomAccess> RoomService::requireActive(int64_t chatId, int64_t user
     co_return room;
 }
 
-drogon::Task<RoomAccess> RoomService::requireAdmin(int64_t chatId, int64_t userId)
+drogon::Task<RoomAccess> RoomService::requirePermission(int64_t chatId, int64_t userId, const std::string &permission)
 {
     auto room = co_await requireActive(chatId, userId);
-    if (!isAdminRole(room.role))
+    if (!authorityOf(room).has(permission))
         throw notAllowed();
     co_return room;
 }

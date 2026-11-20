@@ -77,7 +77,7 @@ function EmojiPanel({ onPick, onBackspace, onSearchFocus, onPointerEnter, onPoin
         setQuery('')
         requestAnimationFrame(() => {
             const section = scrollRef.current.querySelector(`[data-group="${slug}"]`)
-            if (section) scrollRef.current.scrollTo({ top: section.offsetTop, behavior: 'smooth' })
+            if (section) scrollRef.current.scrollTo({ top: section.offsetTop })
         })
         setActiveGroup(slug)
     }

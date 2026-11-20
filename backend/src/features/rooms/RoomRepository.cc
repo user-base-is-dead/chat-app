@@ -1,9 +1,12 @@
 #include "features/rooms/RoomRepository.h"
 
+#include <algorithm>
+
 #include <drogon/orm/Exception.h>
 
 #include "core/database/Database.h"
 #include "features/realtime/Hub.h"
+#include "features/rooms/Authority.h"
 
 namespace features::rooms
 {
@@ -15,10 +18,19 @@ const char *const kSummarySelect =
     "me.status, me.role, me.last_read_message_id, me.muted, "
     "(extract(epoch FROM me.pinned_at) * 1000)::bigint AS pinned_at, "
     "(SELECT count(*) FROM chat_members x WHERE x.chat_id = c.id AND x.status = 'active') AS member_count, "
+    "COALESCE((SELECT string_agg(DISTINCT p, ',') FROM member_roles mr JOIN room_roles rr ON rr.id = mr.role_id "
+    "CROSS JOIN LATERAL unnest(rr.permissions) AS p WHERE mr.room_id = c.id AND mr.user_id = me.user_id), '') AS role_permissions, "
+    "(SELECT min(rr.position) FROM member_roles mr JOIN room_roles rr ON rr.id = mr.role_id "
+    "WHERE mr.room_id = c.id AND mr.user_id = me.user_id) AS role_rank, "
     "(SELECT COALESCE(max(x.last_read_message_id), 0) FROM chat_members x "
     "WHERE x.chat_id = c.id AND x.user_id <> me.user_id AND x.status = 'active') AS read_up_to, "
-    "(SELECT count(*) FROM messages um WHERE um.chat_id = c.id AND um.id > me.last_read_message_id "
-    "AND um.sender_id <> me.user_id) AS unread_count, "
+    "((SELECT count(*) FROM messages um WHERE um.chat_id = c.id AND um.id > me.last_read_message_id "
+    "AND um.sender_id <> me.user_id AND can_view_channel(c.id, me.user_id)) + "
+    "(SELECT count(*) FROM room_channels tc JOIN messages um ON um.chat_id = tc.chat_id "
+    "LEFT JOIN channel_reads cr ON cr.chat_id = tc.chat_id AND cr.user_id = me.user_id "
+    "WHERE tc.room_id = c.id AND tc.chat_id <> c.id AND um.id > COALESCE(cr.last_read_message_id, 0) "
+    "AND can_view_channel(tc.chat_id, me.user_id) "
+    "AND um.sender_id <> me.user_id)) AS unread_count, "
     "lm.id AS lm_id, lm.chat_id AS lm_chat_id, lm.sender_id AS lm_sender_id, lm.sender_name AS lm_sender_name, "
     "lm.ciphertext AS lm_ciphertext, lm.edited_at AS lm_edited_at, lm.deleted_at AS lm_deleted_at, "
     "lm.created_at AS lm_created_at "
@@ -33,7 +45,10 @@ const char *const kSummarySelect =
     "    (extract(epoch FROM edited_at) * 1000)::bigint AS edited_at, "
     "    (extract(epoch FROM deleted_at) * 1000)::bigint AS deleted_at, "
     "    (extract(epoch FROM created_at) * 1000)::bigint AS created_at "
-    "    FROM messages m WHERE m.chat_id = c.id ORDER BY m.id DESC LIMIT 1"
+    "    FROM messages m WHERE m.chat_id IN "
+    "    (SELECT c.id WHERE can_view_channel(c.id, me.user_id) UNION ALL SELECT tc.chat_id FROM room_channels tc "
+    "    WHERE tc.room_id = c.id AND tc.chat_id <> c.id AND can_view_channel(tc.chat_id, me.user_id)) "
+    "    ORDER BY m.id DESC LIMIT 1"
     ") lm ON TRUE ";
 
 const char *const kPreviewSelect =
@@ -73,6 +88,8 @@ RoomSummary summaryFromRow(const drogon::orm::Row &row)
         row["pinned_at"].isNull() ? std::nullopt : std::optional<int64_t>(row["pinned_at"].as<int64_t>()),
         row["muted"].as<bool>(),
         std::nullopt,
+        splitKeys(row["role_permissions"].as<std::string>()),
+        row["role_rank"].isNull() ? std::nullopt : std::optional<int>(row["role_rank"].as<int>()),
     };
     if (!row["lm_id"].isNull())
         room.lastMessage = messages::messageFromRow(row, "lm_");
@@ -94,6 +111,14 @@ RoomPreview previewFromRow(const drogon::orm::Row &row)
     };
 }
 
+std::vector<int64_t> idList(const std::string &joined)
+{
+    std::vector<int64_t> ids;
+    for (const auto &part : splitKeys(joined))
+        ids.push_back(std::stoll(part));
+    return ids;
+}
+
 std::vector<int64_t> idsFrom(const drogon::orm::Result &result, const char *column)
 {
     std::vector<int64_t> ids;
@@ -107,11 +132,19 @@ std::vector<int64_t> idsFrom(const drogon::orm::Result &result, const char *colu
 drogon::Task<std::optional<RoomAccess>> RoomRepository::access(int64_t chatId, int64_t userId)
 {
     const auto result = co_await core::database::client()->execSqlCoro(
-        "SELECT c.type, COALESCE(me.status, '') AS status, COALESCE(me.role, '') AS role, "
-        "r.is_public, r.members_can_send, r.members_can_add "
-        "FROM rooms r JOIN chats c ON c.id = r.chat_id "
+        "SELECT g.type, r.chat_id AS room_id, COALESCE(me.status, '') AS status, COALESCE(me.role, '') AS role, "
+        "r.is_public, r.members_can_send, r.members_can_add, "
+        "COALESCE((SELECT string_agg(DISTINCT p, ',') FROM member_roles mr JOIN room_roles rr ON rr.id = mr.role_id "
+        "CROSS JOIN LATERAL unnest(rr.permissions) AS p WHERE mr.room_id = r.chat_id AND mr.user_id = $2), '') AS role_permissions, "
+        "(SELECT min(rr.position) FROM member_roles mr JOIN room_roles rr ON rr.id = mr.role_id "
+        "WHERE mr.room_id = r.chat_id AND mr.user_id = $2) AS role_rank, "
+        "array_to_string(channel_permissions(c.id, $2), ',') AS channel_permissions "
+        "FROM chats c "
+        "LEFT JOIN room_channels rc ON rc.chat_id = c.id "
+        "JOIN rooms r ON r.chat_id = COALESCE(rc.room_id, c.id) "
+        "JOIN chats g ON g.id = r.chat_id "
         "LEFT JOIN chat_members me ON me.chat_id = r.chat_id AND me.user_id = $2 "
-        "WHERE r.chat_id = $1",
+        "WHERE c.id = $1",
         chatId,
         userId);
     if (result.empty())
@@ -122,7 +155,13 @@ drogon::Task<std::optional<RoomAccess>> RoomRepository::access(int64_t chatId, i
                          row["role"].as<std::string>(),
                          row["is_public"].as<bool>(),
                          row["members_can_send"].as<bool>(),
-                         row["members_can_add"].as<bool>()};
+                         row["members_can_add"].as<bool>(),
+                         row["room_id"].as<int64_t>(),
+                         splitKeys(row["role_permissions"].as<std::string>()),
+                         row["role_rank"].isNull() ? std::nullopt : std::optional<int>(row["role_rank"].as<int>()),
+                         row["channel_permissions"].isNull()
+                             ? std::nullopt
+                             : std::optional<std::vector<std::string>>(splitKeys(row["channel_permissions"].as<std::string>()))};
 }
 
 drogon::Task<std::vector<RoomSummary>> RoomRepository::listForUser(int64_t userId)
@@ -276,16 +315,21 @@ drogon::Task<std::optional<RoomPreview>> RoomRepository::findByKey(std::string k
     co_return previewFromRow(result[0]);
 }
 
-drogon::Task<std::vector<RoomMember>> RoomRepository::members(int64_t chatId, int64_t limit, int64_t offset)
+drogon::Task<std::vector<RoomMember>> RoomRepository::members(int64_t chatId, int64_t limit, int64_t offset, int64_t channelId)
 {
     const auto result = co_await core::database::client()->execSqlCoro(
         "SELECT u.id, u.username, u.display_name, m.role, m.status, u.disabled_at IS NOT NULL AS disabled, "
-        "u.deleted_at IS NOT NULL AS deleted FROM chat_members m JOIN users u ON u.id = m.user_id "
-        "WHERE m.chat_id = $1 ORDER BY m.status = 'active' DESC, "
+        "u.deleted_at IS NOT NULL AS deleted, u.show_last_seen, "
+        "COALESCE((SELECT string_agg(mr.role_id::text, ',') FROM member_roles mr "
+        "WHERE mr.room_id = m.chat_id AND mr.user_id = m.user_id), '') AS role_ids "
+        "FROM chat_members m JOIN users u ON u.id = m.user_id "
+        "WHERE m.chat_id = $1 AND ($4::bigint = 0 OR can_view_channel($4::bigint, m.user_id)) "
+        "ORDER BY m.status = 'active' DESC, "
         "CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, m.joined_at, u.id LIMIT $2 OFFSET $3",
         chatId,
         limit,
-        offset);
+        offset,
+        channelId);
     std::vector<RoomMember> members;
     members.reserve(result.size());
     for (const auto &row : result)
@@ -295,7 +339,9 @@ drogon::Task<std::vector<RoomMember>> RoomRepository::members(int64_t chatId, in
                                      row["role"].as<std::string>(),
                                      row["status"].as<std::string>(),
                                      row["disabled"].as<bool>(),
-                                     row["deleted"].as<bool>()});
+                                     row["deleted"].as<bool>(),
+                                     row["show_last_seen"].as<bool>(),
+                                     idList(row["role_ids"].as<std::string>())});
     co_return members;
 }
 
@@ -355,6 +401,10 @@ drogon::Task<> RoomRepository::removeMember(int64_t chatId, int64_t userId)
 {
     co_await core::database::client()->execSqlCoro(
         "DELETE FROM chat_members WHERE chat_id = $1 AND user_id = $2", chatId, userId);
+    co_await core::database::client()->execSqlCoro(
+        "DELETE FROM member_roles WHERE room_id = $1 AND user_id = $2", chatId, userId);
+    co_await core::database::client()->execSqlCoro(
+        "DELETE FROM channel_overrides WHERE room_id = $1 AND target_type = 'member' AND target_id = $2", chatId, userId);
 }
 
 drogon::Task<> RoomRepository::setRole(int64_t chatId, int64_t userId, std::string role)
@@ -370,7 +420,10 @@ drogon::Task<> RoomRepository::transfer(int64_t chatId, int64_t ownerId, int64_t
 {
     auto transaction = co_await core::database::client()->newTransactionCoro();
     co_await transaction->execSqlCoro(
-        "UPDATE chat_members SET role = 'admin' WHERE chat_id = $1 AND user_id = $2", chatId, ownerId);
+        "UPDATE chat_members m SET role = CASE WHEN c.type = 'group' THEN 'member' ELSE 'admin' END "
+        "FROM chats c WHERE c.id = m.chat_id AND m.chat_id = $1 AND m.user_id = $2",
+        chatId,
+        ownerId);
     co_await transaction->execSqlCoro(
         "UPDATE chat_members SET role = 'owner' WHERE chat_id = $1 AND user_id = $2", chatId, userId);
 }
@@ -416,11 +469,92 @@ drogon::Task<std::optional<int64_t>> RoomRepository::messageSender(int64_t chatI
 
 drogon::Task<int64_t> RoomRepository::onlineCount(int64_t chatId)
 {
-    const auto ids = co_await activeMemberIds(chatId);
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT m.user_id FROM chat_members m JOIN users u ON u.id = m.user_id "
+        "WHERE m.chat_id = $1 AND m.status = 'active' AND u.show_last_seen "
+        "AND u.disabled_at IS NULL AND u.deleted_at IS NULL",
+        chatId);
     int64_t online = 0;
-    for (const auto id : ids)
+    for (const auto id : idsFrom(result, "user_id"))
         if (realtime::hub().isOnline(id))
             ++online;
     co_return online;
+}
+
+drogon::Task<std::vector<int64_t>> RoomRepository::groupMateIds(int64_t userId)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT DISTINCT other.user_id FROM chat_members me "
+        "JOIN chats c ON c.id = me.chat_id AND c.type = 'group' "
+        "JOIN chat_members other ON other.chat_id = me.chat_id AND other.status = 'active' AND other.user_id <> $1 "
+        "WHERE me.user_id = $1 AND me.status = 'active'",
+        userId);
+    co_return idsFrom(result, "user_id");
+}
+
+drogon::Task<int64_t> RoomRepository::roomIdOf(int64_t chatId)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT COALESCE((SELECT room_id FROM room_channels WHERE chat_id = $1), $1) AS room_id", chatId);
+    co_return result[0]["room_id"].as<int64_t>();
+}
+
+drogon::Task<> RoomRepository::markChannelRead(int64_t chatId, int64_t userId, int64_t messageId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "INSERT INTO channel_reads (chat_id, user_id, last_read_message_id) VALUES ($1, $2, $3) "
+        "ON CONFLICT (chat_id, user_id) DO UPDATE "
+        "SET last_read_message_id = GREATEST(channel_reads.last_read_message_id, EXCLUDED.last_read_message_id)",
+        chatId,
+        userId,
+        messageId);
+}
+
+drogon::Task<> RoomRepository::addDefaultChannel(int64_t roomId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "INSERT INTO room_channels (chat_id, room_id, category_id, name, position) VALUES ($1, $1, NULL, 'general', 0) "
+        "ON CONFLICT DO NOTHING",
+        roomId);
+}
+
+drogon::Task<> RoomRepository::removeChannels(int64_t roomId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "DELETE FROM chats WHERE id IN (SELECT chat_id FROM room_channels WHERE room_id = $1 AND chat_id <> $1)", roomId);
+}
+
+drogon::Task<> RoomRepository::addDefaultRole(int64_t roomId, int64_t roleId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "INSERT INTO room_roles (id, room_id, name, permissions, position, builtin) "
+        "VALUES ($1, $2, 'Admin', ARRAY['administrator'], 0, TRUE)",
+        roleId,
+        roomId);
+}
+
+drogon::Task<> RoomRepository::giveDefaultRole(int64_t roomId, int64_t userId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "INSERT INTO member_roles (room_id, user_id, role_id) "
+        "SELECT room_id, $2, id FROM room_roles WHERE room_id = $1 AND builtin ON CONFLICT DO NOTHING",
+        roomId,
+        userId);
+}
+
+drogon::Task<std::vector<int64_t>> RoomRepository::viewerIds(int64_t roomId, int64_t channelId)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT user_id FROM chat_members WHERE chat_id = $1 AND status = 'active' AND can_view_channel($2, user_id)",
+        roomId,
+        channelId);
+    co_return idsFrom(result, "user_id");
+}
+
+bool RoomAccess::canInChannel(const std::string &key) const
+{
+    if (!channelPermissions)
+        return true;
+    return std::find(channelPermissions->begin(), channelPermissions->end(), key) != channelPermissions->end();
 }
 }

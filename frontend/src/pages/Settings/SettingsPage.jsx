@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './SettingsPage.module.css'
 import Avatar from '../../components/Avatar/Avatar'
 import ChevronIcon from '../../components/Icons/ChevronIcon'
 import AtIcon from '../../components/Icons/AtIcon'
 import HashIcon from '../../components/Icons/HashIcon'
+import InfoIcon from '../../components/Icons/InfoIcon'
 import EditIcon from '../../components/Icons/EditIcon'
 import LockIcon from '../../components/Icons/LockIcon'
 import DisabledUserIcon from '../../components/Icons/DisabledUserIcon'
 import LogoutIcon from '../../components/Icons/LogoutIcon'
-import { getColorChoice, getThemeChoice, setColorChoice, setThemeChoice } from '../../utils/theme'
-import { appColors } from '../../utils/chroma'
+import { getThemeChoice, setThemeChoice } from '../../utils/theme'
 import { revealChange } from '../../utils/motion'
+import { getPrivacy, setPrivacy } from '../../api/users'
 import ProfileSettings from './ProfileSettings'
 import AccountSettings from './AccountSettings'
 import PasswordSettings from './PasswordSettings'
@@ -25,21 +26,34 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [view, setView] = useState('main')
     const [copied, setCopied] = useState(null)
     const [theme, setTheme] = useState(getThemeChoice)
-    const [color, setColor] = useState(getColorChoice)
+    const [showLastSeen, setShowLastSeen] = useState(null)
+
+    useEffect(() => {
+        let active = true
+        getPrivacy()
+            .then((privacy) => active && setShowLastSeen(privacy.showLastSeen))
+            .catch(() => active && setShowLastSeen(true))
+        return () => {
+            active = false
+        }
+    }, [])
+
+    const changeLastSeen = async (next) => {
+        const before = showLastSeen
+        setShowLastSeen(next)
+        try {
+            const saved = await setPrivacy(next)
+            setShowLastSeen(saved.showLastSeen)
+        } catch {
+            setShowLastSeen(before)
+        }
+    }
 
     const chooseTheme = (choice, e) => {
         if (choice === theme) return
         revealChange(() => {
             setThemeChoice(choice)
             setTheme(choice)
-        }, e.clientX, e.clientY)
-    }
-
-    const chooseColor = (choice, e) => {
-        if (choice === color) return
-        revealChange(() => {
-            setColorChoice(choice)
-            setColor(choice)
         }, e.clientX, e.clientY)
     }
 
@@ -86,6 +100,15 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                         <span className={styles.rowHint}>Username</span>
                     </span>
                 </button>
+                {user.bio && (
+                    <button className={styles.row} type="button" onClick={() => copy('bio', user.bio)}>
+                        <span className={`${styles.icon} ${styles.iconOrange}`}><InfoIcon /></span>
+                        <span className={styles.rowText}>
+                            <span className={`${styles.rowLabel} ${styles.rowWrap}`}>{copied === 'bio' ? 'Copied' : user.bio}</span>
+                            <span className={styles.rowHint}>Bio</span>
+                        </span>
+                    </button>
+                )}
                 <button className={styles.row} type="button" onClick={() => copy('id', user.id)}>
                     <span className={`${styles.icon} ${styles.iconPurple}`}><HashIcon /></span>
                     <span className={styles.rowText}>
@@ -110,28 +133,22 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                         </button>
                     ))}
                 </div>
-                <span className={styles.colorTitle}>Color</span>
-                <div className={styles.colors}>
-                    {appColors.map((item) => (
-                        <button
-                            key={item.id}
-                            className={item.id === color ? `${styles.color} ${styles.colorActive}` : styles.color}
-                            type="button"
-                            style={{ '--swatch': item.value }}
-                            aria-label={item.label}
-                            aria-pressed={item.id === color}
-                            onClick={(e) => chooseColor(item.id, e)}
-                        />
-                    ))}
-                </div>
             </div>
 
             <div className={styles.group}>
-                <button className={styles.row} type="button" onClick={() => setView('profile')}>
-                    <span className={`${styles.icon} ${styles.iconPurple}`}><EditIcon /></span>
-                    <span className={styles.rowLabel}>Edit Profile</span>
-                    <span className={styles.chevron}><ChevronIcon /></span>
-                </button>
+                <span className={styles.groupTitle}>Privacy</span>
+                <label className={styles.switchRow}>
+                    Show my last seen and online
+                    <input
+                        className={styles.switch}
+                        type="checkbox"
+                        checked={showLastSeen ?? true}
+                        disabled={showLastSeen === null}
+                        onChange={(e) => changeLastSeen(e.target.checked)}
+                    />
+                </label>
+            </div>
+            <div className={styles.group}>
                 <button className={styles.row} type="button" onClick={() => setView('password')}>
                     <span className={`${styles.icon} ${styles.iconGrey}`}><LockIcon /></span>
                     <span className={styles.rowLabel}>Change Password</span>

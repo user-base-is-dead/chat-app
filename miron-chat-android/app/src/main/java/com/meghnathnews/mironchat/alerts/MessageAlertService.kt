@@ -135,7 +135,7 @@ class MessageAlertService : Service() {
                 chats.forEach { chat ->
                     val last = chat.lastAt ?: return@forEach
                     if (chat.unreadCount == 0) NotificationManagerCompat.from(this@MessageAlertService).cancel(chat.id, MESSAGE_ID)
-                    if (baseline && last > seen.getLong(chat.id, 0L) && shouldAlert(chat)) post(chat)
+                    if (baseline && last > seen.getLong(chat.id, 0L) && shouldAlert(chat)) post(chat, titleOf(chat))
                     editor.putLong(chat.id, last)
                 }
                 editor.putBoolean(BASELINE, true).apply()
@@ -149,7 +149,17 @@ class MessageAlertService : Service() {
         !AppState.visible && !chat.muted && chat.status != "restricted" && chat.unreadCount > 0 &&
             !(chat.isRoom && chat.status == "request")
 
-    private fun post(chat: Chat) {
+    private suspend fun titleOf(chat: Chat): String {
+        if (chat.kind != "group" || chat.lastChatId.isEmpty()) return chat.name
+        return try {
+            val channel = app.channels.list(chat.id).channels.firstOrNull { it.id == chat.lastChatId }
+            if (channel != null) "${chat.name} \u203A #${channel.name}" else chat.name
+        } catch (_: ApiError) {
+            chat.name
+        }
+    }
+
+    private fun post(chat: Chat, title: String) {
         val manager = NotificationManagerCompat.from(this)
         if (!manager.areNotificationsEnabled()) return
         val open = Intent(this, MainActivity::class.java)
@@ -164,7 +174,7 @@ class MessageAlertService : Service() {
         val text = if (chat.kind == "group" && chat.lastSender.isNotEmpty()) "${chat.lastSender}: ${chat.lastText}" else chat.lastText.orEmpty()
         val notification = NotificationCompat.Builder(this, MESSAGE_CHANNEL)
             .setSmallIcon(R.drawable.ic_chats)
-            .setContentTitle(chat.name)
+            .setContentTitle(title)
             .setContentText(text)
             .setSubText(if (chat.unreadCount > 1) "${chat.unreadCount} new messages" else null)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

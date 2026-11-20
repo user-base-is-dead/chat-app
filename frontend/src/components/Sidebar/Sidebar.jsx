@@ -13,14 +13,18 @@ import ActionBubble from '../ActionBubble/ActionBubble'
 import FindPanel from '../FindPanel/FindPanel'
 import RoomCreate from '../RoomCreate/RoomCreate'
 import RoomList from '../RoomList/RoomList'
+import GroupRail from '../GroupRail/GroupRail'
+import ChannelList from '../ChannelList/ChannelList'
+import Avatar from '../Avatar/Avatar'
 import { formatCount } from '../../utils/formatCount'
+import { can } from '../../utils/roles'
 
 const folders = [{ id: 'all', label: 'General' }]
 const PIN_LIMIT = 5
 const tabKinds = { groups: 'group', channels: 'channel' }
 const titles = { chats: 'Chats', groups: 'Groups', channels: 'Channels', settings: 'Settings' }
 
-function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, restricted, searchResults, selectedChatId, getLastMessage, search, searchFocus, onSearchChange, onSelectChat, onOpenMessage, onStartChat, onPinChat, onMuteChat, onRestrictChat, onUnrestrictChat, onDeleteChat, onLogout, rooms, knownPeople, roomPinnedCount, onRoomCreated, onOpenRoom, onOpenKey, onLeaveRoom, onDeleteRoom, onAcceptInvite, onDeclineInvite }) {
+function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, restricted, searchResults, selectedChatId, getLastMessage, search, searchFocus, onSearchChange, onSelectChat, onOpenMessage, onStartChat, onPinChat, onMuteChat, onRestrictChat, onUnrestrictChat, onDeleteChat, onLogout, rooms, knownPeople, roomPinnedCount, onRoomCreated, onOpenRoom, onOpenKey, onLeaveRoom, onDeleteRoom, onAcceptInvite, onDeclineInvite, railGroup, channelList, onSelectGroup, onOpenChannel, onOpenGroupInfo, onChannelsChanged, onNotice }) {
     const [activeTab, setActiveTab] = useState('chats')
     const [activeFolder, setActiveFolder] = useState('all')
     const [requestsOpen, setRequestsOpen] = useState(false)
@@ -114,7 +118,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                         {activeTab !== 'settings' && (
                             <label className={styles.searchBox}>
                                 <span className={styles.searchIcon}><SearchIcon /></span>
-                                <input ref={searchRef} className={styles.search} type="text" placeholder="Search" value={search} onChange={(e) => onSearchChange(e.target.value)} />
+                                <input ref={searchRef} className={styles.search} type="text" placeholder={`Search your ${titles[activeTab].toLowerCase()}`} value={search} onChange={(e) => onSearchChange(e.target.value)} />
                             </label>
                         )}
                     </div>
@@ -257,7 +261,48 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                         ))}
                     </div>
                 )}
-                {!covered && tabKind && !searching && (
+                {!covered && activeTab === 'groups' && !searching && loading && <div className={styles.list}><ChatListSkeleton /></div>}
+                {!covered && activeTab === 'groups' && !searching && !loading && tabRooms.length === 0 && <GroupsPage />}
+                {!covered && activeTab === 'groups' && !searching && !loading && tabRooms.length > 0 && (
+                    <div className={styles.groups}>
+                        <GroupRail
+                            groups={tabRooms}
+                            selectedId={railGroup?.id}
+                            pinnedCount={roomPinnedCount}
+                            onSelect={onSelectGroup}
+                            onNew={() => openFind('new-group')}
+                            onPin={onPinChat}
+                            onMute={onMuteChat}
+                            onLeave={onLeaveRoom}
+                            onDelete={onDeleteRoom}
+                        />
+                        {railGroup?.status === 'request' && (
+                            <div className={styles.invite}>
+                                <Avatar name={railGroup.name} photo={railGroup.photo} size={88} />
+                                <span className={styles.inviteName}>{railGroup.name}</span>
+                                <span className={styles.inviteCount}>{railGroup.memberCount} {railGroup.memberCount === 1 ? 'member' : 'members'}</span>
+                                <div className={styles.inviteButtons}>
+                                    <button className={styles.inviteDecline} type="button" onClick={() => onDeclineInvite(railGroup)}>Decline</button>
+                                    <button className={styles.inviteAccept} type="button" onClick={() => onAcceptInvite(railGroup)}>Accept</button>
+                                </div>
+                            </div>
+                        )}
+                        {railGroup?.status === 'active' && (
+                            <ChannelList
+                                key={railGroup.id}
+                                room={railGroup}
+                                list={channelList}
+                                openId={selectedChatId}
+                                canManage={can(railGroup, 'manageChannels')}
+                                onOpen={(channel) => onOpenChannel(railGroup, channel)}
+                                onOpenInfo={() => onOpenGroupInfo(railGroup)}
+                                onChanged={() => onChannelsChanged(railGroup.id)}
+                                onError={(error) => onNotice(error.message)}
+                            />
+                        )}
+                    </div>
+                )}
+                {!covered && activeTab === 'channels' && !searching && (
                     <RoomList
                         rooms={tabRooms}
                         loading={loading}

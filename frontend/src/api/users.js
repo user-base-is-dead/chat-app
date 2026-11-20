@@ -15,3 +15,11 @@ export function disableAccount(password) {
 export function deleteAccount(password) {
     return authorized('/users/me/delete', { method: 'POST', body: { password } })
 }
+
+export function getPrivacy() {
+    return authorized('/users/me/privacy')
+}
+
+export function setPrivacy(showLastSeen) {
+    return authorized('/users/me/privacy', { method: 'PATCH', body: { showLastSeen } })
+}

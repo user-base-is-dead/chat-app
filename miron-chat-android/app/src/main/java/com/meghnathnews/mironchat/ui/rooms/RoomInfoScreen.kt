@@ -1,5 +1,17 @@
 package com.meghnathnews.mironchat.ui.rooms
 
+import com.meghnathnews.mironchat.MironApp
+import com.meghnathnews.mironchat.data.Role
+import com.meghnathnews.mironchat.data.RoleDraft
+import com.meghnathnews.mironchat.data.Standing
+import com.meghnathnews.mironchat.data.above
+import com.meghnathnews.mironchat.data.can
+import com.meghnathnews.mironchat.data.colorOf
+import com.meghnathnews.mironchat.data.outranks
+import com.meghnathnews.mironchat.data.rankOf
+import com.meghnathnews.mironchat.ui.theme.roleColor
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -86,7 +98,11 @@ private const val COPIED_FOR = 1_500L
 private val CoverHeight = 158.dp
 private val AvatarSize = 104.dp
 
-private enum class InfoView { Main, Edit, Add }
+private enum class InfoView { Main, Edit, Add, Roles, Role, MemberRoles }
+
+private data class RoleEdit(val id: String?, val position: Int, val draft: RoleDraft)
+
+private data class MemberEdit(val member: RoomMember, val selected: List<String>)
 
 private data class Ask(val title: String, val text: String, val action: suspend () -> Unit)
 
@@ -125,10 +141,19 @@ fun RoomInfoScreen(
     var picked by remember { mutableStateOf(emptyList<Person>()) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    var roles by remember { mutableStateOf(emptyList<Role>()) }
+    var roleEdit by remember { mutableStateOf<RoleEdit?>(null) }
+    var memberEdit by remember { mutableStateOf<MemberEdit?>(null) }
+    val roleApi = (context.applicationContext as MironApp).roles
     val label = roomLabel(chat.kind)
+    val isGroup = chat.kind == "group"
     val isOwner = chat.role == "owner"
-    val isAdmin = isOwner || chat.role == "admin"
+    val isAdmin = chat.can("manageGroup")
+    val canManageRoles = isGroup && chat.can("manageRoles")
+    val me = Standing(isOwner, chat.rank)
     val link = roomLink(chat)
+    val standingOf: (RoomMember) -> Standing = { Standing(it.role == "owner", rankOf(it.roleIds, roles)) }
+    val reloadRoles: suspend () -> Unit = { roles = roleApi.list(chat.id) }
 
     val toast: (String) -> Unit = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     val run: (suspend () -> Unit) -> Unit = { work ->
@@ -142,7 +167,16 @@ fun RoomInfoScreen(
         }
     }
 
-    BackHandler { if (shown == InfoView.Main) onBack() else shown = InfoView.Main }
+    BackHandler {
+        shown = when (shown) {
+            InfoView.Main -> {
+                onBack()
+                InfoView.Main
+            }
+            InfoView.Role -> InfoView.Roles
+            else -> InfoView.Main
+        }
+    }
 
     DisposableEffect(view, shown) {
         val bars = WindowCompat.getInsetsController((view.context as Activity).window, view)
@@ -155,6 +189,14 @@ fun RoomInfoScreen(
             val list = rooms.members(chat.id)
             members = list
             hasMore = list.size == MEMBER_PAGE_SIZE
+        } catch (_: ApiError) {
+        }
+    }
+
+    LaunchedEffect(chat.id, refreshKey, isGroup) {
+        if (!isGroup) return@LaunchedEffect
+        try {
+            reloadRoles()
         } catch (_: ApiError) {
         }
     }
@@ -183,7 +225,113 @@ fun RoomInfoScreen(
                     .navigationBarsPadding()
                     .imePadding(),
             ) {
-                ScreenHeader(if (shown == InfoView.Edit) "Edit $label" else "Add Members") { shown = InfoView.Main }
+                val roleReadOnly = shown == InfoView.Role && roleEdit?.id != null && !me.above(roleEdit?.position ?: 0)
+                val title = when (shown) {
+                    InfoView.Edit -> "Edit $label"
+                    InfoView.Add -> "Add Members"
+                    InfoView.Role -> if (roleEdit?.id != null) "Edit Role" else "New Role"
+                    else -> "Roles"
+                }
+                ScreenHeader(title) { shown = if (shown == InfoView.Role) InfoView.Roles else InfoView.Main }
+                if (shown == InfoView.Roles || shown == InfoView.Role || shown == InfoView.MemberRoles) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        when (shown) {
+                            InfoView.Roles -> RoleListContent(
+                                roles = roles,
+                                canCreate = canManageRoles,
+                                onOpen = { role ->
+                                    roleEdit = RoleEdit(role.id, role.position, RoleDraft(role.name, role.color, role.separate, role.permissions))
+                                    error = ""
+                                    shown = InfoView.Role
+                                },
+                                onNew = {
+                                    roleEdit = RoleEdit(null, roles.size, RoleDraft())
+                                    error = ""
+                                    shown = InfoView.Role
+                                },
+                            )
+                            InfoView.Role -> roleEdit?.let { edit ->
+                                RoleEditorContent(
+                                    draft = edit.draft,
+                                    readOnly = roleReadOnly,
+                                    canMoveUp = edit.id != null && me.above(edit.position - 1),
+                                    canMoveDown = edit.id != null && edit.position < roles.size - 1,
+                                    onChange = { roleEdit = edit.copy(draft = it) },
+                                    onMove = edit.id?.let { id ->
+                                        { direction: String ->
+                                            scope.launch {
+                                                try {
+                                                    val moved = roleApi.move(chat.id, id, direction)
+                                                    if (moved != null) roleEdit = roleEdit?.copy(position = moved.position)
+                                                    reloadRoles()
+                                                } catch (failure: ApiError) {
+                                                    toast(failure.message.orEmpty())
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onDelete = edit.id?.let { id ->
+                                        {
+                                            ask = Ask("Delete ${edit.draft.name}?", "Everyone with this role will lose it.") {
+                                                roleApi.delete(chat.id, id)
+                                                reloadRoles()
+                                                shown = InfoView.Roles
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+                            else -> memberEdit?.let { edit ->
+                                MemberRolesContent(
+                                    name = edit.member.name,
+                                    roles = roles,
+                                    selected = edit.selected,
+                                    isEditable = { role -> me.above(role.position) },
+                                    onToggle = { id, on ->
+                                        memberEdit = edit.copy(selected = if (on) edit.selected + id else edit.selected - id)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    if (shown != InfoView.Roles && !roleReadOnly) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                            if (error.isNotEmpty()) {
+                                Text(error, color = Danger, fontSize = 13.5.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp))
+                            }
+                            PrimaryButton("Save", busy) {
+                                scope.launch {
+                                    busy = true
+                                    error = ""
+                                    try {
+                                        if (shown == InfoView.Role) {
+                                            val edit = roleEdit ?: return@launch
+                                            if (edit.id == null) roleApi.create(chat.id, edit.draft) else roleApi.update(chat.id, edit.id, edit.draft)
+                                            reloadRoles()
+                                            shown = InfoView.Roles
+                                        } else {
+                                            val edit = memberEdit ?: return@launch
+                                            roleApi.setMemberRoles(chat.id, edit.member.id, edit.selected)
+                                            reloadRoles()
+                                            onChanged()
+                                            shown = InfoView.Main
+                                        }
+                                    } catch (failure: ApiError) {
+                                        error = failure.message.orEmpty()
+                                    } finally {
+                                        busy = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return@Column
+                }
                 if (shown == InfoView.Edit) {
                     Column(
                         modifier = Modifier
@@ -264,6 +412,7 @@ fun RoomInfoScreen(
                     .offset(y = -AvatarSize / 2)
                     .clip(CircleShape)
                     .background(Panel)
+                    .border(1.dp, BubbleBorder, CircleShape)
                     .padding(6.dp),
             ) {
                 Avatar(chat.name, AvatarSize, photo = chat.photo)
@@ -319,6 +468,9 @@ fun RoomInfoScreen(
                             shown = InfoView.Add
                         }
                     }
+                    if (canManageRoles) {
+                        ActionRow(R.drawable.ic_person_fill, "Roles", Ink) { shown = InfoView.Roles }
+                    }
                 }
                 if (isAdmin && chat.kind == "group") {
                     InfoCard {
@@ -334,22 +486,39 @@ fun RoomInfoScreen(
                 InfoCard {
                     CardTitle("Members")
                     members.forEach { member ->
+                        val self = member.id == userId
+                        val reachable = isOwner || me.outranks(standingOf(member))
+                        val notOwner = !self && member.role != "owner"
                         MemberRow(
                             member = member,
-                            self = member.id == userId,
+                            self = self,
                             menuOpen = menuFor == member.id,
-                            isOwner = isOwner,
-                            isAdmin = isAdmin,
+                            nameColor = if (isGroup && !member.disabled && !member.deleted) roleColor(colorOf(member.roleIds, roles)) else null,
+                            badge = if (isGroup) (if (member.role == "owner") "Owner" else "") else when (member.role) {
+                                "owner" -> "Owner"
+                                "admin" -> "Admin"
+                                else -> ""
+                            },
+                            canRoles = canManageRoles && member.status == "active" && reachable,
+                            canPromote = !isGroup && notOwner && isOwner && member.status == "active",
+                            canTransfer = notOwner && isOwner && member.status == "active",
+                            canRemove = notOwner && if (isGroup) chat.can("removeMembers") && reachable else isOwner || (isAdmin && member.role == "member"),
                             onOpen = { menuFor = member.id },
                             onClose = { menuFor = null },
+                            onRoles = {
+                                memberEdit = MemberEdit(member, member.roleIds)
+                                error = ""
+                                shown = InfoView.MemberRoles
+                            },
                             onRole = { role -> run { rooms.setRole(chat.id, member.id, role) } },
                             onTransfer = {
-                                ask = Ask("Transfer ownership?", "${member.name} will become the owner. You will stay as an admin.") {
+                                val after = if (isGroup) "You will get the Admin role." else "You will stay as an admin."
+                                ask = Ask("Transfer ownership?", "${member.name} will become the owner. $after") {
                                     rooms.transfer(chat.id, member.id)
                                 }
                             },
                             onRemove = {
-                                ask = Ask("Remove ${member.name}?", "They cannot join again until an admin adds them.") {
+                                ask = Ask("Remove ${member.name}?", "They cannot join again until someone adds them.") {
                                     rooms.removeMember(chat.id, member.id)
                                 }
                             },
@@ -448,21 +617,20 @@ private fun MemberRow(
     member: RoomMember,
     self: Boolean,
     menuOpen: Boolean,
-    isOwner: Boolean,
-    isAdmin: Boolean,
+    nameColor: Color?,
+    badge: String,
+    canRoles: Boolean,
+    canPromote: Boolean,
+    canTransfer: Boolean,
+    canRemove: Boolean,
     onOpen: () -> Unit,
     onClose: () -> Unit,
+    onRoles: () -> Unit,
     onRole: (String) -> Unit,
     onTransfer: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val canRemove = !self && member.role != "owner" && (isOwner || (isAdmin && member.role == "member"))
-    val canPromote = !self && isOwner && member.role != "owner" && member.status == "active"
-    val roleName = when (member.role) {
-        "owner" -> "Owner"
-        "admin" -> "Admin"
-        else -> ""
-    }
+    val roleName = badge
     Box {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -470,14 +638,14 @@ private fun MemberRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .clickable(enabled = canRemove || canPromote, onClick = onOpen)
+                .clickable(enabled = canRemove || canPromote || canTransfer || canRoles, onClick = onOpen)
                 .padding(8.dp),
         ) {
             Avatar(member.name, 40.dp, disabled = member.disabled, deleted = member.deleted)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (self) "${member.name} (You)" else member.name,
-                    color = Ink,
+                    color = nameColor ?: Ink,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -494,12 +662,20 @@ private fun MemberRow(
             shape = RoundedCornerShape(18.dp),
             containerColor = Panel,
         ) {
+            if (canRoles) {
+                MenuItem("Roles") {
+                    onClose()
+                    onRoles()
+                }
+            }
             if (canPromote) {
                 val admin = member.role == "admin"
                 MenuItem(if (admin) "Remove Admin" else "Make Admin") {
                     onClose()
                     onRole(if (admin) "member" else "admin")
                 }
+            }
+            if (canTransfer) {
                 MenuItem("Transfer Ownership") {
                     onClose()
                     onTransfer()

@@ -2,6 +2,7 @@
 
 #include "core/auth/AuthFilter.h"
 #include "core/http/ApiError.h"
+#include "features/realtime/Presence.h"
 
 namespace features::users
 {
@@ -34,6 +35,34 @@ drogon::Task<drogon::HttpResponsePtr> UserController::updateProfile(drogon::Http
         auto user = co_await service_.updateProfile(
             currentUserId(request), stringField(body, "username"), stringField(body, "displayName"), stringField(body, "bio"));
         co_return jsonResponse(toJson(user));
+    }
+    catch (const ApiError &error)
+    {
+        co_return errorResponse(error);
+    }
+}
+
+drogon::Task<drogon::HttpResponsePtr> UserController::privacy(drogon::HttpRequestPtr request)
+{
+    Json::Value body;
+    body["showLastSeen"] = (co_await users_.showsLastSeen(currentUserId(request))).value_or(true);
+    co_return jsonResponse(body);
+}
+
+drogon::Task<drogon::HttpResponsePtr> UserController::setPrivacy(drogon::HttpRequestPtr request)
+{
+    try
+    {
+        const auto &body = requireJson(request);
+        if (!body["showLastSeen"].isBool())
+            throw ApiError(drogon::k400BadRequest, "invalid_value", "showLastSeen must be true or false");
+        const bool show = body["showLastSeen"].asBool();
+        const auto userId = currentUserId(request);
+        co_await users_.setShowLastSeen(userId, show);
+        co_await realtime::announceVisibility(userId, show);
+        Json::Value reply;
+        reply["showLastSeen"] = show;
+        co_return jsonResponse(reply);
     }
     catch (const ApiError &error)
     {

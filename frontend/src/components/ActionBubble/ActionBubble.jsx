@@ -4,9 +4,12 @@ import BubbleIcon from '../Icons/BubbleIcon'
 import SearchIcon from '../Icons/SearchIcon'
 import PlusIcon from '../Icons/PlusIcon'
 
-const actions = [
+const createActions = [
     { id: 'new-group', label: 'New Group', Icon: PlusIcon },
     { id: 'new-channel', label: 'New Channel', Icon: PlusIcon },
+]
+
+const searchActions = [
     { id: 'contacts', label: 'Search User', Icon: BubbleIcon },
     { id: 'groups', label: 'Search Group', Icon: BubbleIcon },
     { id: 'channels', label: 'Search Channel', Icon: BubbleIcon },
@@ -43,7 +46,14 @@ function ActionBubble({ onSelect }) {
         <div className={styles.wrap} ref={wrapRef}>
             {open && (
                 <div className={styles.menu} role="menu">
-                    {actions.map(({ id, label, Icon }) => (
+                    {createActions.map(({ id, label, Icon }) => (
+                        <button key={id} className={styles.item} type="button" role="menuitem" onClick={() => choose(id)}>
+                            <span className={styles.itemIcon}><Icon /></span>
+                            {label}
+                        </button>
+                    ))}
+                    <span className={styles.heading} role="presentation">Global Search</span>
+                    {searchActions.map(({ id, label, Icon }) => (
                         <button key={id} className={styles.item} type="button" role="menuitem" onClick={() => choose(id)}>
                             <span className={styles.itemIcon}><Icon /></span>
                             {label}
@@ -54,7 +64,8 @@ function ActionBubble({ onSelect }) {
             <button
                 className={open ? `${styles.button} ${styles.buttonOpen}` : styles.button}
                 type="button"
-                aria-label="Search or create"
+                aria-label="Global search"
+                title="Global search"
                 aria-expanded={open}
                 onClick={() => setOpen((value) => !value)}
             >

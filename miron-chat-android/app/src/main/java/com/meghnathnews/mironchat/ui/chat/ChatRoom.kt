@@ -1,12 +1,18 @@
 package com.meghnathnews.mironchat.ui.chat
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.meghnathnews.mironchat.data.ApiError
 import com.meghnathnews.mironchat.data.Chat
 import com.meghnathnews.mironchat.data.ChatRepository
 import com.meghnathnews.mironchat.data.MESSAGE_PAGE_SIZE
+import com.meghnathnews.mironchat.data.PostRepository
+import com.meghnathnews.mironchat.data.PostStats
+import com.meghnathnews.mironchat.data.PostSwitches
+import com.meghnathnews.mironchat.data.VIEW_BATCH
+import com.meghnathnews.mironchat.data.toReactions
 import com.meghnathnews.mironchat.data.RealtimeClient
 import com.meghnathnews.mironchat.data.RealtimeEvent
 import com.meghnathnews.mironchat.data.RoomRepository
@@ -48,12 +54,14 @@ class ChatRoom(
     private val userId: String,
     private val repository: ChatRepository,
     private val rooms: RoomRepository,
+    val posts: PostRepository,
     private val realtime: RealtimeClient,
     parent: CoroutineScope,
     private val onChatGone: () -> Unit,
     private val onChatChanged: () -> Unit,
     val focusInput: Boolean = false,
     val focusId: String? = null,
+    private val groupId: String? = null,
 ) {
     private val scope = CoroutineScope(parent.coroutineContext + Job(parent.coroutineContext[Job]))
     private var tempCount = 0
@@ -62,6 +70,15 @@ class ChatRoom(
     private var readJob: Job? = null
     private var typingJob: Job? = null
     private val played = mutableSetOf<String>()
+    private val asked = mutableSetOf<String>()
+
+    val isChannel = opened.kind == "channel"
+    val postStats = mutableStateMapOf<String, PostStats>()
+    var commentEvent by mutableStateOf<RealtimeEvent?>(null)
+        private set
+    var switches by mutableStateOf(posts.switches(opened.id))
+        private set
+    var notice by mutableStateOf<String?>(null)
 
     val chatId = opened.id
 
@@ -112,7 +129,7 @@ class ChatRoom(
 
     private suspend fun loadOnline() {
         try {
-            onlineCount = rooms.detail(chatId).onlineCount
+            onlineCount = rooms.detail(groupId ?: chatId).onlineCount
         } catch (_: ApiError) {
         }
     }
@@ -207,6 +224,55 @@ class ChatRoom(
         }
     }
 
+    fun changeSwitches(next: PostSwitches) {
+        switches = next
+        posts.saveSwitches(chatId, next)
+    }
+
+    fun react(messageId: String, emoji: String) {
+        val current = postStats[messageId] ?: return
+        scope.launch {
+            try {
+                postStats[messageId] =
+                    if (current.myReaction == emoji) posts.unreact(chatId, messageId) else posts.react(chatId, messageId, emoji)
+            } catch (error: ApiError) {
+                notice = error.message
+            }
+        }
+    }
+
+    fun togglePostSwitch(messageId: String, reactions: Boolean) {
+        val current = postStats[messageId] ?: return
+        scope.launch {
+            try {
+                postStats[messageId] = posts.setSwitches(
+                    chatId,
+                    messageId,
+                    if (reactions) !current.allowReactions else current.allowReactions,
+                    if (reactions) current.allowComments else !current.allowComments,
+                )
+            } catch (error: ApiError) {
+                notice = error.message
+            }
+        }
+    }
+
+    private fun askStats(only: List<String>? = null) {
+        if (!isChannel) return
+        val ids = only ?: messages.filter { !it.temp && it.id !in asked }.map { it.id }
+        if (ids.isEmpty()) return
+        asked.addAll(ids)
+        scope.launch {
+            ids.chunked(VIEW_BATCH).forEach { batch ->
+                try {
+                    posts.view(chatId, batch).forEach { postStats[it.id] = it }
+                } catch (_: ApiError) {
+                    asked.removeAll(batch.toSet())
+                }
+            }
+        }
+    }
+
     fun resend(message: Message) {
         update(message.id) { it.copy(state = SendState.Sending) }
         scope.launch { deliver(message.id, message.text) }
@@ -263,6 +329,7 @@ class ChatRoom(
         messages = list.map(::toMessage).sortedBy { it.number }
         hasMore = list.size == MESSAGE_PAGE_SIZE
         hasNewer = false
+        askStats()
     }
 
     private suspend fun fetchUnread(opened: Chat) {
@@ -280,10 +347,11 @@ class ChatRoom(
 
     private suspend fun deliver(tempId: String, text: String) {
         try {
-            val saved = toMessage(repository.send(chatId, text))
+            val saved = toMessage(repository.send(chatId, text, if (isChannel) switches else null))
             messages = messages
                 .filterNot { it.id == saved.id }
                 .map { if (it.id == tempId) saved.copy(key = it.key, live = true) else it }
+            askStats()
             onChatChanged()
         } catch (_: ApiError) {
             update(tempId) { it.copy(state = SendState.Failed) }
@@ -317,6 +385,17 @@ class ChatRoom(
                 showTyping(data.optBoolean("active"))
             }
             "room.changed" -> scope.launch { loadOnline() }
+            "post.reactions" -> {
+                val id = data.optString("messageId")
+                val current = postStats[id] ?: return
+                postStats[id] = current.copy(reactions = data.optJSONArray("reactions")?.toReactions() ?: emptyList())
+            }
+            "post.comment", "post.commentDeleted" -> {
+                val id = data.optString("messageId")
+                postStats[id]?.let { postStats[id] = it.copy(comments = data.optInt("comments")) }
+                commentEvent = event
+            }
+            "post.settings" -> askStats(listOf(data.optString("messageId")))
         }
     }
 
@@ -351,6 +430,7 @@ class ChatRoom(
 
     private fun drop(id: String) {
         messages = messages.filterNot { it.id == id }
+        postStats.remove(id)
     }
 
     private fun update(id: String, change: (Message) -> Message) {
@@ -364,6 +444,7 @@ class ChatRoom(
         val kept = messages.filterNot { it.id in ids }
         val merged = fresh.map { it.copy(key = keys[it.id] ?: it.key) }
         messages = (kept + merged).sortedBy { it.number }
+        askStats()
     }
 
     private fun toMessage(message: ServerMessage) = Message(

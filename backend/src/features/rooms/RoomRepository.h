@@ -19,6 +19,12 @@ struct RoomAccess
     bool isPublic;
     bool membersCanSend;
     bool membersCanAdd;
+    int64_t roomId;
+    std::vector<std::string> rolePermissions;
+    std::optional<int> rank;
+    std::optional<std::vector<std::string>> channelPermissions;
+
+    bool canInChannel(const std::string &key) const;
 };
 
 struct RoomFields
@@ -53,6 +59,8 @@ struct RoomSummary
     std::optional<int64_t> pinnedAt;
     bool muted;
     std::optional<messages::Message> lastMessage;
+    std::vector<std::string> rolePermissions;
+    std::optional<int> rank;
 };
 
 struct RoomPreview
@@ -77,6 +85,8 @@ struct RoomMember
     std::string status;
     bool disabled;
     bool deleted;
+    bool showsLastSeen;
+    std::vector<int64_t> roleIds;
 };
 
 class RoomRepository
@@ -93,7 +103,8 @@ class RoomRepository
     drogon::Task<bool> ownsPhoto(int64_t photoId, int64_t userId);
     drogon::Task<std::vector<RoomPreview>> search(std::string query, std::string kind, int64_t userId, int limit);
     drogon::Task<std::optional<RoomPreview>> findByKey(std::string key, int64_t userId);
-    drogon::Task<std::vector<RoomMember>> members(int64_t chatId, int64_t limit, int64_t offset);
+    drogon::Task<std::vector<RoomMember>> members(int64_t chatId, int64_t limit, int64_t offset, int64_t channelId = 0);
+    drogon::Task<std::vector<int64_t>> viewerIds(int64_t roomId, int64_t channelId);
     drogon::Task<std::vector<int64_t>> activeMemberIds(int64_t chatId);
     drogon::Task<std::vector<int64_t>> allMemberIds(int64_t chatId);
     drogon::Task<std::vector<int64_t>> roomsOf(int64_t userId);
@@ -109,5 +120,12 @@ class RoomRepository
     drogon::Task<bool> restrictedBy(int64_t userId, int64_t adderId);
     drogon::Task<std::optional<int64_t>> messageSender(int64_t chatId, int64_t messageId);
     drogon::Task<int64_t> onlineCount(int64_t chatId);
+    drogon::Task<int64_t> roomIdOf(int64_t chatId);
+    drogon::Task<std::vector<int64_t>> groupMateIds(int64_t userId);
+    drogon::Task<> markChannelRead(int64_t chatId, int64_t userId, int64_t messageId);
+    drogon::Task<> addDefaultChannel(int64_t roomId);
+    drogon::Task<> addDefaultRole(int64_t roomId, int64_t roleId);
+    drogon::Task<> giveDefaultRole(int64_t roomId, int64_t userId);
+    drogon::Task<> removeChannels(int64_t roomId);
 };
 }

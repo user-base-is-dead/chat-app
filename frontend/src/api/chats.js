@@ -73,8 +73,8 @@ export function loadNewerMessages(chatId, afterId) {
     return authorized(`/chats/${chatId}/messages?limit=${MESSAGE_PAGE_SIZE}&after=${afterId}`)
 }
 
-export function sendMessage(chatId, text) {
-    return authorized(`/chats/${chatId}/messages`, { method: 'POST', body: { ciphertext: encodeContent(text) } })
+export function sendMessage(chatId, text, switches) {
+    return authorized(`/chats/${chatId}/messages`, { method: 'POST', body: { ciphertext: encodeContent(text), ...switches } })
 }
 
 export function deleteMessage(chatId, messageId) {

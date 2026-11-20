@@ -54,6 +54,12 @@ class AuthRepository(
         return requireData(api.authorized("/users/me", "PATCH", body)).toUser()
     }
 
+    suspend fun privacy(): Boolean =
+        api.authorized("/users/me/privacy")?.optBoolean("showLastSeen", true) ?: true
+
+    suspend fun setPrivacy(show: Boolean): Boolean =
+        requireData(api.authorized("/users/me/privacy", "PATCH", JSONObject().put("showLastSeen", show))).optBoolean("showLastSeen", show)
+
     suspend fun changePassword(currentPassword: String, newPassword: String) {
         val body = JSONObject()
             .put("currentPassword", currentPassword)

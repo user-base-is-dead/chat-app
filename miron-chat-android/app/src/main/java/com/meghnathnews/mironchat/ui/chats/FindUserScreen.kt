@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.chats
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -133,6 +135,7 @@ fun FindUserScreen(
                 .height(46.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Card)
+                .border(1.dp, BubbleBorder, RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp),
         ) {
             if (query.isEmpty()) Text(kind.placeholder, color = InkMuted, fontSize = 15.sp)

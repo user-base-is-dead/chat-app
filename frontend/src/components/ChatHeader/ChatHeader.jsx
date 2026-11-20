@@ -13,9 +13,10 @@ import CopyIcon from '../Icons/CopyIcon'
 import DeleteIcon from '../Icons/DeleteIcon'
 import LogoutIcon from '../Icons/LogoutIcon'
 import PeerStatus from '../PeerStatus/PeerStatus'
+import GroupsIcon from '../Icons/GroupsIcon'
 import { roomLabel } from '../../utils/roomLink'
 
-function ChatHeader({ chat, typing, typingName, onBack, onOpenInfo, onCall, onSearch, onToggleMute, onLeave, onDelete }) {
+function ChatHeader({ chat, channelName, typing, typingName, onBack, onOpenInfo, onCall, onSearch, onToggleMute, onLeave, onDelete, onMembers, membersOpen }) {
     const [menu, setMenu] = useState(null)
 
     const items = chat.kind ? [
@@ -44,9 +45,9 @@ function ChatHeader({ chat, typing, typingName, onBack, onOpenInfo, onCall, onSe
             <button className={styles.peer} type="button" onClick={onOpenInfo}>
                 <Avatar name={chat.name} photo={chat.photo} size={44} disabled={chat.peerDisabled} deleted={chat.peerDeleted} morphTarget />
                 <div className={styles.peerText}>
-                    <div className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>{chat.name}</div>
+                    <div className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>{channelName ? `# ${channelName}` : chat.name}</div>
                     <div className={styles.status}>
-                        <PeerStatus key={chat.id} chat={chat} typing={typing} typingName={typingName} />
+                        <PeerStatus key={chat.id} chat={chat} prefix={channelName ? chat.name : null} typing={typing} typingName={typingName} />
                     </div>
                 </div>
             </button>
@@ -54,6 +55,17 @@ function ChatHeader({ chat, typing, typingName, onBack, onOpenInfo, onCall, onSe
                 {!chat.kind && (
                     <button className={styles.action} type="button" aria-label="Call" onClick={onCall}>
                         <CallIcon />
+                    </button>
+                )}
+                {onMembers && (
+                    <button
+                        className={membersOpen ? `${styles.action} ${styles.actionOn}` : styles.action}
+                        type="button"
+                        aria-label="Members"
+                        aria-pressed={Boolean(membersOpen)}
+                        onClick={onMembers}
+                    >
+                        <GroupsIcon />
                     </button>
                 )}
                 <button className={styles.action} type="button" aria-label="Search" onClick={onSearch}>

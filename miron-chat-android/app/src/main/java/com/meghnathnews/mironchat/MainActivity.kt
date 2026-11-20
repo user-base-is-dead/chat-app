@@ -1,5 +1,10 @@
 package com.meghnathnews.mironchat
 
+import androidx.compose.ui.platform.createLifecycleAwareWindowRecomposer
+import androidx.compose.ui.platform.compositionContext
+import androidx.compose.ui.MotionDurationScale
+import androidx.compose.ui.ExperimentalComposeUiApi
+import android.view.View
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -33,6 +38,11 @@ import com.meghnathnews.mironchat.ui.auth.AuthScreen
 import com.meghnathnews.mironchat.ui.main.MainScreen
 import com.meghnathnews.mironchat.ui.theme.MironTheme
 
+private object StillMotion : MotionDurationScale {
+    override val scaleFactor: Float = 0f
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
 class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
@@ -58,6 +68,8 @@ class MainActivity : ComponentActivity() {
         routeFrom(intent)
         val clearBar = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         enableEdgeToEdge(statusBarStyle = clearBar, navigationBarStyle = clearBar)
+        val content = findViewById<View>(android.R.id.content)
+        content.compositionContext = content.createLifecycleAwareWindowRecomposer(StillMotion, lifecycle)
         setContent {
             MironTheme {
                 AppRoot()

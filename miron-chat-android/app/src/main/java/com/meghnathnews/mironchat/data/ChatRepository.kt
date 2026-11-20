@@ -37,6 +37,9 @@ data class Chat(
     val membersCanSend: Boolean = true,
     val membersCanAdd: Boolean = false,
     val lastSender: String = "",
+    val lastChatId: String = "",
+    val permissions: List<String> = emptyList(),
+    val rank: Int? = null,
 ) {
     val isRoom: Boolean get() = kind.isNotEmpty()
 }
@@ -86,9 +89,11 @@ class ChatRepository(private val api: ApiClient) {
     suspend fun messagesAfter(chatId: String, afterId: Long): List<ServerMessage> =
         messages("/chats/$chatId/messages?limit=$MESSAGE_PAGE_SIZE&after=$afterId")
 
-    suspend fun send(chatId: String, text: String): ServerMessage {
+    suspend fun send(chatId: String, text: String, switches: PostSwitches? = null): ServerMessage {
         val content = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
-        val saved = api.authorized("/chats/$chatId/messages", "POST", JSONObject().put("ciphertext", content))
+        val body = JSONObject().put("ciphertext", content)
+        if (switches != null) body.put("allowReactions", switches.allowReactions).put("allowComments", switches.allowComments)
+        val saved = api.authorized("/chats/$chatId/messages", "POST", body)
             ?: throw ApiError(0, "unknown", "Something went wrong")
         return toMessage(saved)
     }
@@ -166,6 +171,9 @@ class ChatRepository(private val api: ApiClient) {
             membersCanSend = room.optBoolean("membersCanSend"),
             membersCanAdd = room.optBoolean("membersCanAdd"),
             lastSender = last?.optString("senderName").orEmpty().ifEmpty { if (last != null) "Deleted Account" else "" },
+            lastChatId = last?.optString("chatId").orEmpty(),
+            permissions = room.optJSONArray("permissions")?.let { keys -> List(keys.length()) { keys.getString(it) } }.orEmpty(),
+            rank = if (room.isNull("rank")) null else room.optInt("rank"),
         )
     }
 

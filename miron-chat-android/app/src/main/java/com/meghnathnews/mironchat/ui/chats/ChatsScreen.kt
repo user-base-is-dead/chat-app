@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.chats
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -76,7 +78,7 @@ fun ChatsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTitle("Chats")
-        SearchBox(model.search, searchFocus) { model.search = it }
+        SearchBox(model.search, "Search your chats", searchFocus) { model.search = it }
         if (searching) {
             SearchResults(model, bottomSpace, onOpenChat, onOpenMessage)
             return@Column
@@ -194,7 +196,7 @@ fun Centered(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun SearchBox(value: String, focus: FocusRequester? = null, onChange: (String) -> Unit) {
+fun SearchBox(value: String, placeholder: String, focus: FocusRequester? = null, onChange: (String) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -204,6 +206,7 @@ fun SearchBox(value: String, focus: FocusRequester? = null, onChange: (String) -
             .height(46.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 14.dp),
     ) {
         Icon(
@@ -213,7 +216,7 @@ fun SearchBox(value: String, focus: FocusRequester? = null, onChange: (String) -
             modifier = Modifier.size(20.dp),
         )
         Box(modifier = Modifier.weight(1f)) {
-            if (value.isEmpty()) Text("Search", color = InkMuted, fontSize = 15.sp)
+            if (value.isEmpty()) Text(placeholder, color = InkMuted, fontSize = 15.sp)
             BasicTextField(
                 value = value,
                 onValueChange = onChange,
@@ -238,6 +241,7 @@ private fun RequestsRow(count: Int, onClick: () -> Unit) {
             .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(10.dp),
     ) {

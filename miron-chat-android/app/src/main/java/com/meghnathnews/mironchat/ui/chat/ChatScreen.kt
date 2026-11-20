@@ -1,5 +1,14 @@
 package com.meghnathnews.mironchat.ui.chat
 
+import com.meghnathnews.mironchat.MironApp
+import com.meghnathnews.mironchat.data.GroupData
+import com.meghnathnews.mironchat.data.MEMBER_LIMIT
+import com.meghnathnews.mironchat.data.RoomMember
+import com.meghnathnews.mironchat.data.can
+import com.meghnathnews.mironchat.data.colorOf
+import com.meghnathnews.mironchat.data.ApiError
+import com.meghnathnews.mironchat.data.Presence
+import com.meghnathnews.mironchat.ui.rooms.MemberListScreen
 import com.meghnathnews.mironchat.ui.theme.Surface
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
@@ -107,6 +116,7 @@ import com.meghnathnews.mironchat.ui.theme.Ink
 import com.meghnathnews.mironchat.ui.theme.InkMuted
 import com.meghnathnews.mironchat.ui.theme.MutedIcon
 import com.meghnathnews.mironchat.ui.theme.Panel
+import com.meghnathnews.mironchat.ui.theme.DoodleInk
 import com.meghnathnews.mironchat.ui.theme.Stage
 import com.meghnathnews.mironchat.ui.theme.bouncySpring
 import com.meghnathnews.mironchat.ui.theme.softSpring
@@ -119,9 +129,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val LOAD_EDGE = 5
 private const val JUMP_SHOW_AFTER = 4
-private const val DOODLE_STRENGTH = 0.9f
+private const val DOODLE_STRENGTH = 1f
 private const val FLASH_FOR = 2_000L
 private val DoodleTile = 300.dp
+private val ChatDoodleTile = 520.dp
 private val Neutral = Color(0xFF7C7A84)
 private val HeaderSpace = 76.dp
 
@@ -139,8 +150,13 @@ private data class MessageRow(
     val groupStart: Boolean,
     val groupEnd: Boolean,
     val firstOfSender: Boolean,
+    val runStart: Boolean = false,
 ) : ListRow {
     override val key get() = message.key
+}
+
+private data class DayRow(val label: String, val at: Long) : ListRow {
+    override val key get() = "day-$at"
 }
 
 private data object UnreadRow : ListRow {
@@ -151,6 +167,8 @@ private data object UnreadRow : ListRow {
 fun ChatScreen(
     room: ChatRoom,
     chat: Chat,
+    channelName: String? = null,
+    selfName: String = "",
     onBack: () -> Unit,
     onSearch: () -> Unit,
     onToggleMute: () -> Unit,
@@ -162,6 +180,8 @@ fun ChatScreen(
     onSearchPeople: suspend (String) -> List<Person>,
     onRoomChanged: () -> Unit,
     onLeave: () -> Unit,
+    presence: Map<String, Presence> = emptyMap(),
+    channelPermissions: List<String>? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -169,24 +189,53 @@ fun ChatScreen(
     var confirm by remember { mutableStateOf<Confirm?>(null) }
     var positioned by remember(room) { mutableStateOf(false) }
     var infoOpen by remember(room) { mutableStateOf(false) }
+    var membersOpen by remember(room) { mutableStateOf(false) }
+    val groupOpen = chat.kind == "group" && chat.status == "active"
+    var groupData by remember(chat.id) { mutableStateOf<GroupData?>(null) }
+    LaunchedEffect(chat.id, room.chatId, roomTick, groupOpen) {
+        if (!groupOpen) return@LaunchedEffect
+        val roleApi = (context.applicationContext as MironApp).roles
+        try {
+            val all = mutableListOf<RoomMember>()
+            while (all.size < MEMBER_LIMIT) {
+                val page = rooms.members(chat.id, all.size, room.chatId)
+                all += page
+                if (page.size < 100) break
+            }
+            groupData = GroupData(all.filter { it.status == "active" }.take(MEMBER_LIMIT), roleApi.list(chat.id), System.currentTimeMillis())
+        } catch (_: ApiError) {
+        }
+    }
+    val nameColors = groupData?.let { data -> data.members.associate { it.id to colorOf(it.roleIds, data.roles) } }.orEmpty()
+    val ownerId = groupData?.members?.firstOrNull { it.role == "owner" }?.id
     var flashId by remember(room) { mutableStateOf<String?>(null) }
+    var commentsFor by remember(room) { mutableStateOf<String?>(null) }
+    val channel = chat.kind == "channel"
+    val canManagePosts = channel && (chat.role == "owner" || chat.role == "admin")
     val focusManager = LocalFocusManager.current
     val inputFocus = remember(room) { FocusRequester() }
     val canType = if (chat.isRoom) chat.canSend else chat.status != "request" && chat.status != "restricted" && !chat.peerDeleted && !chat.peerDisabled
     val sameSide: (Message?, Message) -> Boolean = { other, message ->
-        other != null && other.mine == message.mine && (message.mine || other.senderId == message.senderId)
+        !channel && other != null && other.mine == message.mine && (message.mine || other.senderId == message.senderId)
     }
     val messages = room.messages
-    val rows = remember(messages, room.unreadFromId) {
+    val flat = chat.kind == "group"
+    val rows = remember(messages, room.unreadFromId, channel, flat) {
         buildList<ListRow> {
             messages.forEachIndexed { index, message ->
+                val previous = messages.getOrNull(index - 1)
+                val next = messages.getOrNull(index + 1)
                 if (message.id == room.unreadFromId) add(UnreadRow)
+                if (flat && (previous == null || !sameDay(previous.createdAt, message.createdAt))) {
+                    add(DayRow(dayLabel(message.createdAt), message.createdAt))
+                }
                 add(
                     MessageRow(
                         message = message,
-                        groupStart = !sameSide(messages.getOrNull(index - 1), message),
-                        groupEnd = !sameSide(messages.getOrNull(index + 1), message),
-                        firstOfSender = !sameSide(messages.getOrNull(index - 1), message),
+                        groupStart = !sameSide(previous, message),
+                        groupEnd = !sameSide(next, message),
+                        firstOfSender = !sameSide(previous, message),
+                        runStart = !joins(previous, message) || message.id == room.unreadFromId,
                     ),
                 )
             }
@@ -257,7 +306,7 @@ fun ChatScreen(
             .fillMaxSize()
             .background(Stage),
     ) {
-        Doodle(if (chat.peerDisabled || chat.peerDeleted) Neutral else Chroma)
+        Doodle(DoodleInk, tileSize = ChatDoodleTile, solid = true)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -272,13 +321,14 @@ fun ChatScreen(
                 LazyColumn(
                     state = listState,
                     reverseLayout = true,
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (flat) 0.dp else 3.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HeaderSpace, bottom = 8.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(rows, key = { row -> row.key }) { row ->
                         when (row) {
                             UnreadRow -> UnreadLine()
+                            is DayRow -> DayLine(row.label)
                             is MessageRow -> {
                                 val message = row.message
                                 val animateIn = remember(message.key) { room.shouldPlay(message) }
@@ -288,17 +338,40 @@ fun ChatScreen(
                                         placementSpec = softSpring(IntOffset.VisibilityThreshold),
                                     ),
                                 ) {
-                                MessageBubble(
+                                if (flat) {
+                                    GroupMessage(
+                                        message = message,
+                                        start = row.runStart,
+                                        focused = message.id == flashId,
+                                        selfName = selfName,
+                                        nameColor = nameColors[message.senderId],
+                                        canDelete = (channelPermissions?.contains("deleteMessages") ?: chat.can("deleteMessages")) &&
+                                            (chat.role == "owner" || message.senderId != ownerId),
+                                        onCopy = { copyText(context, message.text) },
+                                        onResend = { room.resend(message) },
+                                        onDelete = {
+                                            if (message.temp) room.delete(message)
+                                            else confirm = Confirm.DeleteMessage(message)
+                                        },
+                                    )
+                                } else MessageBubble(
                                     message = message,
                                     read = !message.temp && message.number <= room.peerReadId,
                                     groupStart = row.groupStart,
                                     groupEnd = row.groupEnd,
                                     animateIn = animateIn,
                                     focused = message.id == flashId,
-                                    showSender = chat.kind == "group" && !message.mine,
+                                    showSender = channel || (chat.kind == "group" && !message.mine),
+                                    channelName = if (channel) chat.name else null,
+                                    channelPhoto = if (channel) chat.photo else "",
+                                    stats = room.postStats[message.id],
+                                    canManagePosts = canManagePosts,
+                                    onReact = { emoji -> room.react(message.id, emoji) },
+                                    onOpenComments = { commentsFor = message.id },
+                                    onTogglePostSwitch = { reactions -> room.togglePostSwitch(message.id, reactions) },
                                     firstOfSender = row.firstOfSender,
                                     hideTicks = chat.kind == "channel",
-                                    canDelete = !chat.isRoom || chat.role == "owner" || chat.role == "admin",
+                                    canDelete = !chat.isRoom || chat.can("deleteMessages"),
                                     onCopy = { copyText(context, message.text) },
                                     onResend = { room.resend(message) },
                                     onDelete = {
@@ -329,7 +402,8 @@ fun ChatScreen(
             }
             when {
                 chat.isRoom && !chat.canSend && chat.kind == "channel" -> WideButton(if (chat.muted) "Unmute" else "Mute", onToggleMute)
-                chat.isRoom && !chat.canSend -> AccountBar("Only admins can send messages")
+                channelPermissions != null && !channelPermissions.contains("sendMessages") -> AccountBar("You cannot send messages in this channel")
+                chat.kind != "group" && chat.isRoom && !chat.canSend -> AccountBar("Only admins can send messages")
                 chat.status == "request" -> RequestBar(
                     name = chat.name,
                     onAccept = room::accept,
@@ -338,16 +412,20 @@ fun ChatScreen(
                 chat.status == "restricted" -> WideButton("Unrestrict to chat", room::unrestrict)
                 chat.peerDeleted -> AccountBar("This account is deleted")
                 chat.peerDisabled -> AccountBar("This account is disabled")
-                else -> InputBar(
-                    focus = inputFocus,
-                    onTyping = room::typed,
-                    onSend = room::send,
-                    onAttach = { Toast.makeText(context, "Attachments coming soon", Toast.LENGTH_SHORT).show() },
-                )
+                else -> Column {
+                    if (channel) PostToggles(room.switches, room::changeSwitches)
+                    InputBar(
+                        focus = inputFocus,
+                        onTyping = room::typed,
+                        onSend = room::send,
+                        onAttach = { Toast.makeText(context, "Attachments coming soon", Toast.LENGTH_SHORT).show() },
+                    )
+                }
             }
         }
         Header(
             chat = chat,
+            channelName = channelName,
             typing = room.typing,
             typingName = room.typingName,
             onlineCount = room.onlineCount,
@@ -359,6 +437,7 @@ fun ChatScreen(
             onToggleMute = onToggleMute,
             onCopyId = { copyText(context, chat.peerId) },
             onDelete = onDeleteChat,
+            onMembers = if (groupOpen) ({ membersOpen = true }) else null,
         )
     }
 
@@ -396,6 +475,41 @@ fun ChatScreen(
         }
     }
 
+    if (membersOpen) {
+        MemberListScreen(
+            group = chat,
+            data = groupData,
+            userId = userId,
+            presence = presence,
+            onBack = { membersOpen = false },
+        )
+    }
+
+    val commentsPost = commentsFor?.let { id -> messages.firstOrNull { it.id == id } }
+    val commentsStats = commentsPost?.let { room.postStats[it.id] }
+    if (commentsPost != null && commentsStats?.allowComments != false) {
+        CommentsScreen(
+            room = room,
+            chat = chat,
+            post = commentsPost,
+            stats = commentsStats,
+            userId = userId,
+            canModerate = canManagePosts,
+            onBack = { commentsFor = null },
+        )
+    } else if (commentsFor != null) {
+        LaunchedEffect(commentsFor) {
+            if (commentsPost != null) Toast.makeText(context, "Comments are turned off", Toast.LENGTH_SHORT).show()
+            commentsFor = null
+        }
+    }
+
+    LaunchedEffect(room.notice) {
+        val text = room.notice ?: return@LaunchedEffect
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        room.notice = null
+    }
+
     confirm?.let { current ->
         val deleting = current as? Confirm.DeleteMessage
         AlertDialog(
@@ -428,8 +542,8 @@ fun copyText(context: Context, text: String) {
 }
 
 @Composable
-fun Doodle(color: Color, tileSize: Dp = DoodleTile) {
-    val tile: ImageBitmap = ImageBitmap.imageResource(R.drawable.doodle)
+fun Doodle(color: Color, tileSize: Dp = DoodleTile, solid: Boolean = false) {
+    val tile: ImageBitmap = ImageBitmap.imageResource(if (solid) R.drawable.doodle_solid else R.drawable.doodle)
     val size = with(LocalDensity.current) { tileSize.roundToPx() }
     Canvas(modifier = Modifier.fillMaxSize().clipToBounds().graphicsLayer()) {
         val filter = ColorFilter.tint(color, BlendMode.SrcIn)
@@ -462,6 +576,7 @@ private fun UnreadLine() {
             modifier = Modifier
                 .clip(CircleShape)
                 .background(Panel)
+                .border(1.dp, BubbleBorder, CircleShape)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
         )
     }
@@ -498,6 +613,7 @@ private fun JumpButton(
                 .clip(CircleShape)
                 .background(Panel)
                 .border(1.dp, BubbleBorder, CircleShape)
+                .border(1.dp, BubbleBorder, CircleShape)
                 .clickable {
                     onClick()
                     clicks += 1
@@ -525,6 +641,7 @@ private fun JumpButton(
 @Composable
 private fun Header(
     chat: Chat,
+    channelName: String?,
     typing: Boolean,
     typingName: String?,
     onlineCount: Int,
@@ -536,6 +653,7 @@ private fun Header(
     onToggleMute: () -> Unit,
     onCopyId: () -> Unit,
     onDelete: () -> Unit,
+    onMembers: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val choose: (() -> Unit) -> () -> Unit = { action ->
@@ -568,7 +686,7 @@ private fun Header(
                 .weight(1f),
         ) {
             Text(
-                text = chat.name,
+                text = if (channelName != null) "# $channelName" else chat.name,
                 color = if (chat.peerDisabled) MutedIcon else if (chat.peerDeleted) InkMuted else Ink,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
@@ -576,10 +694,11 @@ private fun Header(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!chat.peerDeleted) PeerStatus(chat, typing, typingName, onlineCount)
+            if (!chat.peerDeleted) PeerStatus(chat, typing, typingName, onlineCount, if (channelName != null) chat.name else null)
         }
         }
         if (!chat.isRoom) IconBox(R.drawable.ic_call, "Call", InkMuted, onCall)
+        if (onMembers != null) IconBox(R.drawable.ic_groups, "Members", InkMuted, onMembers)
         IconBox(R.drawable.ic_search, "Search", InkMuted, onSearch)
         Box {
             IconBox(R.drawable.ic_more, "More", InkMuted) { menuOpen = true }
@@ -643,8 +762,9 @@ private fun statusText(chat: Chat, typing: Boolean): String = when {
 }
 
 @Composable
-fun PeerStatus(chat: Chat, typing: Boolean, typingName: String? = null, onlineCount: Int = 0) {
-    val text = if (chat.isRoom) roomStatus(chat, if (typing) typingName else null, onlineCount) else statusText(chat, typing)
+fun PeerStatus(chat: Chat, typing: Boolean, typingName: String? = null, onlineCount: Int = 0, prefix: String? = null) {
+    val plain = if (chat.isRoom) roomStatus(chat, if (typing) typingName else null, onlineCount) else statusText(chat, typing)
+    val text = if (prefix != null && !typing) "$prefix · $plain" else plain
     val active = !chat.peerDisabled && (typing || chat.peerOnline)
     AnimatedContent(
         targetState = text,
@@ -712,6 +832,7 @@ private fun RequestBar(name: String, onAccept: () -> Unit, onDelete: () -> Unit)
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Panel)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
             .padding(14.dp),
     ) {
         Text("$name wants to send you a message", color = Ink, fontSize = 14.sp)
@@ -760,7 +881,8 @@ private fun AccountBar(text: String) {
             .fillMaxWidth()
             .heightIn(min = 56.dp)
             .clip(CircleShape)
-            .background(Panel),
+            .background(Panel)
+            .border(1.dp, BubbleBorder, CircleShape),
     ) {
         Text(text, color = InkMuted, fontSize = 14.sp)
     }

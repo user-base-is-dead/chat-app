@@ -5,7 +5,7 @@
     height: 100vh;
     height: 100dvh;
     padding: 8px 8px 8px 0;
-    overflow: hidden;
+    overflow: clip;
     background: var(--canvas);
 }
 
@@ -22,6 +22,7 @@
     display: flex;
     justify-content: center;
     min-width: 0;
+    border: 1px solid var(--border);
     border-radius: var(--radius-sheet);
     background: color-mix(in srgb, var(--chroma) var(--stage-tint), var(--stage));
     overflow: hidden;
@@ -35,9 +36,9 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: var(--chroma);
-    -webkit-mask: var(--doodle) 0 0 / 300px repeat;
-    mask: var(--doodle) 0 0 / 300px repeat;
+    background: var(--doodle-ink);
+    -webkit-mask: var(--doodle-solid) 0 0 / 600px repeat;
+    mask: var(--doodle-solid) 0 0 / 600px repeat;
     opacity: var(--doodle-strength);
     pointer-events: none;
 }
@@ -52,7 +53,8 @@
 .chatInner {
     position: relative;
     z-index: 1;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     padding: 0 0 12px;

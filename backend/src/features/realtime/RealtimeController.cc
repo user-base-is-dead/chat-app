@@ -10,6 +10,7 @@
 #include "core/security/Tokens.h"
 #include "features/chats/ChatRepository.h"
 #include "features/realtime/Hub.h"
+#include "features/realtime/Presence.h"
 #include "features/rooms/RoomRepository.h"
 #include "features/users/UserRepository.h"
 
@@ -27,33 +28,6 @@ struct Session
     int64_t deviceId = 0;
     bool visible = true;
 };
-
-drogon::Task<> announcePresence(int64_t userId, bool online)
-{
-    try
-    {
-        Json::Value data;
-        data["userId"] = std::to_string(userId);
-        data["online"] = online;
-        data["lastSeenAt"] = Json::Value();
-
-        if (!online)
-        {
-            const auto lastSeen = co_await users::UserRepository().touchLastSeen(userId);
-            if (hub().isOnline(userId))
-                co_return;
-            data["lastSeenAt"] = static_cast<Json::Int64>(lastSeen);
-        }
-
-        const auto peers = co_await chats::ChatRepository().peerIds(userId);
-        for (const auto peerId : peers)
-            hub().send(peerId, "presence", data);
-    }
-    catch (const std::exception &error)
-    {
-        LOG_ERROR << "presence update failed: " << error.what();
-    }
-}
 
 drogon::Task<> authorize(std::weak_ptr<drogon::WebSocketConnection> weak,
                          int64_t userId,
@@ -103,7 +77,7 @@ drogon::Task<> relayTyping(int64_t userId, int64_t chatId, bool active)
         rooms::RoomRepository rooms;
         if (const auto room = co_await rooms.access(chatId, userId))
         {
-            if (room->status != "active" || room->kind != "group")
+            if (room->status != "active" || room->kind != "group" || !room->canInChannel("viewChannel"))
                 co_return;
             const auto user = co_await users::UserRepository().findById(userId);
             Json::Value data;
@@ -111,7 +85,9 @@ drogon::Task<> relayTyping(int64_t userId, int64_t chatId, bool active)
             data["userId"] = std::to_string(userId);
             data["active"] = active;
             data["name"] = user ? user->displayName : "";
-            const auto ids = co_await rooms.activeMemberIds(chatId);
+            if (room->roomId != chatId)
+                data["roomId"] = std::to_string(room->roomId);
+            const auto ids = co_await rooms.viewerIds(room->roomId, chatId);
             for (const auto id : ids)
                 if (id != userId)
                     hub().send(id, "typing", data);

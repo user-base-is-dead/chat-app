@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.rooms
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meghnathnews.mironchat.data.Chat
+import com.meghnathnews.mironchat.data.RoomChannel
 import com.meghnathnews.mironchat.data.roomLabel
 import com.meghnathnews.mironchat.ui.chats.Avatar
 import com.meghnathnews.mironchat.ui.chats.Centered
@@ -61,12 +65,14 @@ fun RoomsScreen(
     actionsFor: (Chat) -> List<ChatAction>,
     onOpenChat: (Chat) -> Unit,
     onOpenMessage: (Chat) -> Unit,
+    onOpenChannel: (Chat, RoomChannel) -> Unit = { _, _ -> },
+    onNewGroup: () -> Unit = {},
 ) {
     val invites = rooms.filter { it.status == "request" }
     val joined = rooms.filter { it.status == "active" }
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTitle(title)
-        SearchBox(model.search) { model.search = it }
+        SearchBox(model.search, "Search your ${title.lowercase()}") { model.search = it }
         when {
             model.search.isNotBlank() -> SearchResults(model, bottomSpace, onOpenChat, onOpenMessage, kind)
             model.loading -> Centered { CircularProgressIndicator(color = Chroma) }
@@ -77,6 +83,35 @@ fun RoomsScreen(
                 ) {
                     Icon(painterResource(icon), null, tint = InkMuted, modifier = Modifier.size(40.dp))
                     Text(emptyText, color = InkMuted, fontSize = 14.sp)
+                }
+            }
+            kind == "group" -> {
+                val group = model.shownGroup
+                LaunchedEffect(group?.id, group?.status) {
+                    if (group != null && group.status == "active" && model.channelLists[group.id] == null) model.loadChannels(group.id)
+                }
+                Row(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
+                    GroupRail(
+                        groups = rooms,
+                        selectedId = group?.id,
+                        bottomSpace = bottomSpace,
+                        actionsFor = actionsFor,
+                        onSelect = model::selectGroup,
+                        onNew = onNewGroup,
+                    )
+                    if (group != null && group.status == "request") {
+                        GroupInvite(group, { model.acceptInvite(group) }, { model.declineInvite(group) })
+                    } else if (group != null) {
+                        ChannelColumn(
+                            group = group,
+                            list = model.channelLists[group.id],
+                            openId = model.room?.chatId,
+                            channels = model.channelStore,
+                            bottomSpace = bottomSpace,
+                            onOpen = { channel -> onOpenChannel(group, channel) },
+                            onManage = { action -> model.manageChannels(group.id, action) },
+                        )
+                    }
                 }
             }
             else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 8.dp), contentPadding = bottomSpace) {
@@ -103,6 +138,7 @@ private fun InviteRow(room: Chat, onAccept: () -> Unit, onDecline: () -> Unit) {
             .padding(horizontal = 8.dp, vertical = 3.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(20.dp))
             .padding(10.dp),
     ) {
         Avatar(room.name, 48.dp, photo = room.photo)

@@ -72,8 +72,8 @@ Json::Value toJson(const ChatSummary &chat)
     json["id"] = std::to_string(chat.id);
     json["status"] = chat.status;
     json["peer"] = users::toJson(chat.peer);
-    json["peer"]["online"] =
-        chat.peerVisible && !chat.peerDisabled && !chat.peerDeleted && realtime::hub().isOnline(chat.peer.id);
+    json["peer"]["online"] = chat.peerVisible && chat.peerShowsLastSeen && !chat.peerDisabled && !chat.peerDeleted &&
+                             realtime::hub().isOnline(chat.peer.id);
     json["peer"]["disabled"] = chat.peerDisabled;
     json["peer"]["deleted"] = chat.peerDeleted;
     if (chat.peerDisabled)
@@ -233,11 +233,13 @@ drogon::Task<std::vector<messages::Message>> ChatService::messagesAfter(int64_t 
 drogon::Task<messages::Message> ChatService::send(int64_t chatId,
                                                   int64_t userId,
                                                   int64_t deviceId,
-                                                  std::string ciphertext)
+                                                  std::string ciphertext,
+                                                  bool allowReactions,
+                                                  bool allowComments)
 {
     validateCiphertext(ciphertext);
     if (const auto room = co_await roomAccess_.access(chatId, userId))
-        co_return co_await rooms_.send(chatId, *room, userId, deviceId, ciphertext);
+        co_return co_await rooms_.send(chatId, *room, userId, deviceId, ciphertext, allowReactions, allowComments);
     const auto member = co_await requireMember(chatId, userId);
     if (member.status == "request")
         throw ApiError(drogon::k403Forbidden, "accept_first", "Accept the message request before replying");
@@ -310,11 +312,17 @@ drogon::Task<> ChatService::markRead(int64_t chatId, int64_t userId, int64_t mes
         notifyReadUpTo(chatId, userId, messageId, member.peerId);
 }
 
+drogon::Task<bool> ChatService::isChannel(int64_t chatId, int64_t userId)
+{
+    const auto room = co_await roomAccess_.access(chatId, userId);
+    co_return room && room->kind == "channel";
+}
+
 drogon::Task<> ChatService::requireReadable(int64_t chatId, int64_t userId)
 {
     if (const auto room = co_await roomAccess_.access(chatId, userId))
     {
-        if (room->status != "active")
+        if (room->status != "active" || (room->kind == "group" && !room->canInChannel("viewChannel")))
             throw chatNotFound();
         co_return;
     }

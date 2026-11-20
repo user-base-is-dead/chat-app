@@ -38,6 +38,9 @@ class UserRepository
     drogon::Task<std::optional<User>> findById(int64_t id);
     drogon::Task<std::vector<User>> search(std::string query, int64_t excludeUserId, int limit);
     drogon::Task<int64_t> touchLastSeen(int64_t id);
+    drogon::Task<std::optional<bool>> showsLastSeen(int64_t id);
+    drogon::Task<> setShowLastSeen(int64_t id, bool show);
+    drogon::Task<std::optional<int64_t>> lastSeenAt(int64_t id);
     drogon::Task<std::optional<User>> updateProfile(int64_t id, std::string username, std::string displayName, std::string bio);
     drogon::Task<> setDisabled(int64_t id, bool disabled);
     drogon::Task<> setPasswordHash(int64_t id, std::string passwordHash);

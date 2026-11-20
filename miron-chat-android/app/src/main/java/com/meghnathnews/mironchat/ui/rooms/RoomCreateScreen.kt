@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.rooms
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -156,6 +158,7 @@ private fun Field(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .background(Card)
+                .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 13.dp),
         )
     }
@@ -169,6 +172,7 @@ private fun TypeSwitch(isPublic: Boolean, onChange: (Boolean) -> Unit) {
             .height(46.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
             .padding(4.dp),
     ) {
         val half = maxWidth / 2
@@ -337,6 +341,7 @@ fun MemberPicker(
                 .height(46.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(Card)
+                .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp),
         ) {
             if (query.isEmpty()) Text("Search by username", color = InkMuted, fontSize = 15.sp)

@@ -27,6 +27,7 @@ struct ChatSummary
     bool muted;
     bool peerDisabled;
     bool peerDeleted;
+    bool peerShowsLastSeen;
 };
 
 struct DmLink

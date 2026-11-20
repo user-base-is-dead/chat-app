@@ -85,6 +85,15 @@
     transition: background 0.15s;
 }
 
+.heading {
+    margin: 6px 4px 0;
+    padding: 8px 8px 4px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
 .item:hover {
     background: var(--surface);
 }

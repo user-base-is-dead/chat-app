@@ -1,0 +1,117 @@
+.rail {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 96px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-right: 1px solid var(--border);
+}
+
+.rail::-webkit-scrollbar {
+    display: none;
+}
+
+.item {
+    position: relative;
+    width: 64px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.photo {
+    display: flex;
+    padding: 1px;
+    border: 1px solid transparent;
+    border-radius: 50%;
+}
+
+.selected .photo {
+    border-color: var(--accent);
+}
+
+.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    background: var(--accent);
+}
+
+.badge {
+    position: absolute;
+    right: 4px;
+    bottom: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--canvas);
+    border-radius: 999px;
+    box-sizing: content-box;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.mutedDot,
+.inviteDot {
+    position: absolute;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--canvas);
+    border-radius: 50%;
+    box-sizing: content-box;
+}
+
+.mutedDot {
+    bottom: 2px;
+    background: var(--text-muted);
+}
+
+.inviteDot {
+    top: 0;
+    background: var(--accent);
+}
+
+.divider {
+    width: 32px;
+    height: 1px;
+    flex-shrink: 0;
+    background: var(--border-strong);
+}
+
+.add {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: var(--panel);
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.add:hover {
+    background: var(--surface-strong);
+}

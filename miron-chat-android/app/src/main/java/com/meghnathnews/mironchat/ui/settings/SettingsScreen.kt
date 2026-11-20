@@ -1,5 +1,11 @@
 package com.meghnathnews.mironchat.ui.settings
 
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.runtime.rememberCoroutineScope
+import com.meghnathnews.mironchat.MironApp
+import kotlinx.coroutines.launch
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.VisibilityThreshold
@@ -147,6 +153,15 @@ private fun SettingsMain(
                 hint = "Username",
                 onClick = { copy("username", "@${user.username}") },
             )
+            if (user.bio.isNotEmpty()) {
+                SettingsRow(
+                    icon = R.drawable.ic_info,
+                    iconColor = IconOrange,
+                    label = if (copied == "bio") "Copied" else user.bio,
+                    hint = "Bio",
+                    onClick = { copy("bio", user.bio) },
+                )
+            }
             SettingsRow(
                 icon = R.drawable.ic_hash,
                 iconColor = IconPurple,
@@ -164,19 +179,9 @@ private fun SettingsMain(
                 modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 8.dp),
             )
             ThemePicker()
-            Text(
-                text = "Color",
-                color = InkMuted,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 10.dp, top = 14.dp, bottom = 8.dp),
-            )
-            ColorPicker()
         }
+        PrivacyGroup()
         Group {
-            SettingsRow(R.drawable.ic_edit, IconPurple, "Edit Profile", chevron = true) {
-                onViewChange(SettingsView.Profile)
-            }
             SettingsRow(R.drawable.ic_lock, IconGrey, "Change Password", chevron = true) {
                 onViewChange(SettingsView.Password)
             }
@@ -198,6 +203,7 @@ private fun Hero(user: User, onEdit: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
             .padding(bottom = 16.dp),
     ) {
         Box(contentAlignment = Alignment.TopCenter, modifier = Modifier.fillMaxWidth()) {
@@ -217,6 +223,7 @@ private fun Hero(user: User, onEdit: () -> Unit) {
                         .height(34.dp)
                         .clip(CircleShape)
                         .background(Panel)
+                        .border(1.dp, BubbleBorder, CircleShape)
                         .clickable(onClick = onEdit)
                         .padding(start = 10.dp, end = 13.dp),
                 ) {
@@ -229,6 +236,7 @@ private fun Hero(user: User, onEdit: () -> Unit) {
                     .padding(top = 46.dp)
                     .clip(CircleShape)
                     .background(Card)
+                    .border(1.dp, BubbleBorder, CircleShape)
                     .padding(5.dp),
             ) {
                 Avatar(user.displayName.ifEmpty { user.username }, 92.dp)
@@ -257,9 +265,50 @@ private fun Group(content: @Composable () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(Card)
+            .border(1.dp, BubbleBorder, RoundedCornerShape(14.dp))
             .padding(6.dp),
     ) {
         content()
+    }
+}
+
+@Composable
+private fun PrivacyGroup() {
+    val context = LocalContext.current
+    val auth = (context.applicationContext as MironApp).auth
+    val scope = rememberCoroutineScope()
+    var show by remember { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(Unit) {
+        show = runCatching { auth.privacy() }.getOrDefault(true)
+    }
+
+    Group {
+        Text(
+            text = "Privacy",
+            color = InkMuted,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 4.dp),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+        ) {
+            Text("Show my last seen and online", color = Ink, fontSize = 15.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Switch(
+                checked = show ?: true,
+                enabled = show != null,
+                onCheckedChange = { next ->
+                    val before = show
+                    show = next
+                    scope.launch { show = runCatching { auth.setPrivacy(next) }.getOrDefault(before) }
+                },
+                colors = SwitchDefaults.colors(checkedTrackColor = Chroma, checkedThumbColor = Color.White),
+            )
+        }
     }
 }
 
@@ -349,42 +398,6 @@ private fun ThemePicker() {
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorPicker() {
-    val context = LocalContext.current
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-    ) {
-        appColors.forEach { item ->
-            val active = item.id == Appearance.color.id
-            val swatch by animateDpAsState(
-                targetValue = if (active) 24.dp else 30.dp,
-                animationSpec = bouncySpring(Dp.VisibilityThreshold),
-                label = "swatch",
-            )
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .then(if (active) Modifier.border(2.dp, item.value, CircleShape) else Modifier)
-                    .clickable { Appearance.chooseColor(context, item) }
-                    .semantics { contentDescription = item.label },
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(swatch)
-                        .clip(CircleShape)
-                        .background(item.value),
-                )
             }
         }
     }

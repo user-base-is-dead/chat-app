@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.chats
 
+import com.meghnathnews.mironchat.ui.theme.AvatarBlankIcon
+import com.meghnathnews.mironchat.ui.theme.AvatarBlank
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -134,17 +136,12 @@ fun Avatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(if (marked) Surface else avatarColor(name)),
+            .background(if (marked) Surface else AvatarBlank),
     ) {
         when {
             deleted -> Icon(painterResource(R.drawable.ic_deleted_user), "Deleted account", tint = InkMuted)
             disabled -> Icon(painterResource(R.drawable.ic_disabled_user), "Disabled account", tint = InkMuted)
-            else -> Text(
-                text = firstLetter(name),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = (size.value * 0.42f).sp,
-            )
+            else -> Icon(painterResource(R.drawable.ic_person_fill), name, tint = AvatarBlankIcon, modifier = Modifier.fillMaxSize())
         }
         if (photo.isNotEmpty()) RemotePhoto(photo)
     }

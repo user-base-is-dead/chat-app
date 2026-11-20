@@ -6,23 +6,35 @@
 
 *, *::before, *::after {
     box-sizing: border-box;
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+}
+
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+    animation: none !important;
 }
 
 :root {
     color-scheme: light;
     --doodle: url('./assets/doodle-pattern-light.svg');
+    --doodle-solid: url('./assets/doodle-solid.svg');
     --font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Color Emoji', sans-serif;
     --font-display: var(--font-ui);
-    --canvas: #F2F2F7;
+    --canvas: #ECECF1;
     --bg: var(--canvas);
     --bg-gradient: var(--bg);
     --panel-base: #FFFFFF;
     --surface-base: #F2F2F7;
     --panel: var(--panel-base);
     --surface: var(--surface-base);
-    --surface-strong: #E5E5EA;
-    --stage: #FFFFFF;
-    --stage-tint: 9%;
+    --surface-strong: #DFDFE6;
+    --stage: #EFEAE2;
+    --stage-tint: 0%;
+    --doodle-ink: #E4DED3;
+    --bubble-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
     --glass: rgba(249, 249, 249, 0.94);
     --dock: rgba(249, 249, 249, 0.94);
     --rail: #131313;
@@ -30,8 +42,8 @@
     --on-rail: #FFFFFF;
     --fab: var(--chroma);
     --on-fab: #FFFFFF;
-    --border: rgba(60, 60, 67, 0.12);
-    --border-strong: rgba(60, 60, 67, 0.22);
+    --border: rgba(60, 60, 67, 0.2);
+    --border-strong: rgba(60, 60, 67, 0.34);
     --text: #111114;
     --text-muted: #6C6C72;
     --icon: #6C6C72;
@@ -43,17 +55,21 @@
     --accent-gradient: var(--accent);
     --focus-ring: color-mix(in srgb, var(--chroma) 40%, transparent);
     --on-accent: #FFFFFF;
+    --avatar-blank: #C2C7CF;
+    --avatar-blank-icon: #FFFFFF;
     --bubble-other: #FFFFFF;
     --bubble-other-text: #111114;
     --bubble-other-muted: #8E8E93;
+    --bubble-ring: rgba(60, 60, 67, 0.16);
     --bubble-mine-mix: 100%;
     --bubble-mine-base: #FFFFFF;
     --bubble-mine-shadow: none;
+    --bubble-mine-ring: transparent;
     --bubble-mine-selection: rgba(255, 255, 255, 0.35);
     --bubble-mine-text: #FFFFFF;
     --bubble-mine-muted: rgba(255, 255, 255, 0.76);
     --bubble-mine-failed: #FFD3D6;
-    --doodle-strength: 0.9;
+    --doodle-strength: 1;
     --danger: #E5484D;
     --danger-soft: rgba(229, 72, 77, 0.1);
     --success: #2F9E5B;
@@ -61,7 +77,7 @@
     --icon-grey: #77756F;
     --icon-orange: #C2410C;
     --shadow: 0 1px 2px rgba(27, 26, 33, 0.06), 0 8px 24px rgba(27, 26, 33, 0.1);
-    --shadow-small: 0 1px 1.5px rgba(17, 17, 20, 0.1);
+    --shadow-small: 0 0 0 1px rgba(60, 60, 67, 0.16), 0 1px 2px rgba(17, 17, 20, 0.12);
     --shadow-lift: 0 2px 6px rgba(27, 26, 33, 0.06), 0 20px 56px rgba(27, 26, 33, 0.16);
     --scrollbar: rgba(19, 19, 19, 0.16);
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -77,6 +93,18 @@
     --hue-blue: #1F6FEB;
     --hue-fuchsia: #A21CAF;
     --hue-green: #2E8540;
+    --role-red: #D93636;
+    --role-orange: #D9480F;
+    --role-amber: #B7791F;
+    --role-yellow: #A68B00;
+    --role-lime: #5C940D;
+    --role-green: #2B8A3E;
+    --role-teal: #099268;
+    --role-cyan: #0B7285;
+    --role-blue: #1C7ED6;
+    --role-indigo: #4263EB;
+    --role-purple: #8E3BC9;
+    --role-pink: #C2255C;
 }
 
 :root[data-theme="dark"] {
@@ -86,15 +114,17 @@
     --panel-base: #1C1C1E;
     --surface-base: #2C2C2E;
     --surface-strong: #3A3A3C;
-    --stage: #0B0B0D;
-    --stage-tint: 13%;
+    --stage: #0B141A;
+    --stage-tint: 0%;
+    --doodle-ink: #121C23;
+    --bubble-shadow: none;
     --glass: rgba(28, 28, 30, 0.94);
     --dock: rgba(28, 28, 30, 0.94);
     --rail: #121214;
     --rail-border: rgba(255, 255, 255, 0.07);
     --on-rail: #F3F1EC;
-    --border: rgba(255, 255, 255, 0.07);
-    --border-strong: rgba(255, 255, 255, 0.14);
+    --border: rgba(255, 255, 255, 0.14);
+    --border-strong: rgba(255, 255, 255, 0.26);
     --text: #F5F5F7;
     --text-muted: #98989F;
     --icon: #98989F;
@@ -104,7 +134,10 @@
     --accent-hover: color-mix(in srgb, var(--chroma) 66%, #ffffff);
     --accent-soft: color-mix(in srgb, var(--chroma) 22%, transparent);
     --focus-ring: color-mix(in srgb, var(--chroma) 55%, transparent);
-    --bubble-other: #26262A;
+    --avatar-blank: #4A4A51;
+    --avatar-blank-icon: #A3A3AB;
+    --bubble-other: #2A2A2F;
+    --bubble-ring: rgba(255, 255, 255, 0.12);
     --bubble-other-text: #F5F5F7;
     --bubble-other-muted: #98989F;
     --doodle-strength: 1;
@@ -113,15 +146,27 @@
     --success: #5CC85C;
     --icon-grey: #6A6862;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.45);
-    --shadow-small: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-small: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.4), 0 30px 80px rgba(0, 0, 0, 0.6);
     --scrollbar: rgba(255, 255, 255, 0.14);
+    --role-red: #FF6B6B;
+    --role-orange: #FF8A4C;
+    --role-amber: #F5B841;
+    --role-yellow: #F0D43A;
+    --role-lime: #A3E048;
+    --role-green: #51CF66;
+    --role-teal: #38D9A9;
+    --role-cyan: #3BC9DB;
+    --role-blue: #4DABF7;
+    --role-indigo: #8C9EFF;
+    --role-purple: #CC8CF0;
+    --role-pink: #F783AC;
 }
 
 :root[data-color="default"] {
-    --stage-tint: 7%;
     --bubble-mine-mix: 24%;
-    --bubble-mine-shadow: var(--shadow-small);
+    --bubble-mine-shadow: var(--bubble-shadow);
+    --bubble-mine-ring: var(--bubble-ring);
     --bubble-mine-selection: color-mix(in srgb, var(--chroma) 35%, transparent);
     --bubble-mine-text: #111114;
     --bubble-mine-muted: color-mix(in srgb, var(--chroma) 74%, #000000);
@@ -129,10 +174,10 @@
 }
 
 :root[data-color="default"][data-theme="dark"] {
-    --stage-tint: 8%;
     --bubble-mine-mix: 56%;
     --bubble-mine-base: #1C1C1E;
     --bubble-mine-shadow: none;
+    --bubble-mine-ring: transparent;
     --bubble-mine-selection: rgba(255, 255, 255, 0.35);
     --bubble-mine-text: #FFFFFF;
     --bubble-mine-muted: rgba(255, 255, 255, 0.76);

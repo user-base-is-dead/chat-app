@@ -42,17 +42,21 @@ drogon::Task<Message> MessageRepository::insert(int64_t id,
                                                 int64_t chatId,
                                                 int64_t senderId,
                                                 int64_t deviceId,
-                                                std::string ciphertext)
+                                                std::string ciphertext,
+                                                bool allowReactions,
+                                                bool allowComments)
 {
     const auto result = co_await core::database::client()->execSqlCoro(
-        std::string("INSERT INTO messages (id, chat_id, sender_id, sender_device_id, ciphertext) "
-                    "VALUES ($1, $2, $3, $4, decode($5, 'base64')) RETURNING ") +
+        std::string("INSERT INTO messages (id, chat_id, sender_id, sender_device_id, ciphertext, allow_reactions, allow_comments) "
+                    "VALUES ($1, $2, $3, $4, decode($5, 'base64'), $6, $7) RETURNING ") +
             kMessageColumns,
         id,
         chatId,
         senderId,
         deviceId,
-        ciphertext);
+        ciphertext,
+        allowReactions,
+        allowComments);
     co_return messageFromRow(result[0]);
 }
 

@@ -3,13 +3,17 @@ package com.meghnathnews.mironchat.ui.chats
 import android.app.Application
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.meghnathnews.mironchat.MironApp
 import com.meghnathnews.mironchat.data.ApiError
+import com.meghnathnews.mironchat.data.ChannelList
 import com.meghnathnews.mironchat.data.Chat
+import com.meghnathnews.mironchat.data.Presence
+import com.meghnathnews.mironchat.data.RoomChannel
 import com.meghnathnews.mironchat.data.Person
 import com.meghnathnews.mironchat.data.RoomPreview
 import com.meghnathnews.mironchat.data.User
@@ -72,14 +76,28 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var roomTick by mutableStateOf(0)
         private set
+    val presence = mutableStateMapOf<String, Presence>()
+
+    var selectedGroupId by mutableStateOf<String?>(null)
+        private set
+    var openGroupId by mutableStateOf<String?>(null)
+        private set
+    var openChannelName by mutableStateOf<String?>(null)
+        private set
+    var notice by mutableStateOf<String?>(null)
+    val channelLists = mutableStateMapOf<String, ChannelList>()
 
     val rooms get() = app.rooms
+    val channelStore get() = app.channels
 
-    val openedChat by derivedStateOf { all.firstOrNull { it.id == room?.chatId } }
+    val openedChat by derivedStateOf { all.firstOrNull { it.id == (openGroupId ?: room?.chatId) } }
     val active by derivedStateOf { all.filter { !it.isRoom && it.status == "active" }.sortedWith(byPinned) }
     val requests by derivedStateOf { all.filter { !it.isRoom && it.status == "request" } }
     val restricted by derivedStateOf { all.filter { !it.isRoom && it.status == "restricted" }.sortedWith(byRecent) }
     val groups by derivedStateOf { all.filter { it.kind == "group" }.sortedWith(byPinned) }
+    val shownGroup by derivedStateOf {
+        groups.firstOrNull { it.id == selectedGroupId } ?: groups.firstOrNull { it.status == "active" } ?: groups.firstOrNull()
+    }
     val channels by derivedStateOf { all.filter { it.kind == "channel" }.sortedWith(byPinned) }
     val knownPeople by derivedStateOf {
         active.filter { !it.peerDeleted && !it.peerDisabled }.map { Person(it.peerId, it.username, it.name) }
@@ -110,13 +128,81 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
         realtime.stop()
     }
 
+    fun selectGroup(group: Chat) {
+        selectedGroupId = group.id
+        if (group.status == "active") loadChannels(group.id)
+    }
+
+    fun loadChannels(roomId: String) {
+        viewModelScope.launch {
+            try {
+                val list = app.channels.list(roomId)
+                channelLists[roomId] = list
+                val current = room
+                val inGroup = openGroupId == roomId || current?.chatId == roomId
+                if (current != null && inGroup && list.channels.none { it.id == current.chatId }) {
+                    closeChat()
+                    notice = "You no longer have access to this channel"
+                }
+            } catch (_: ApiError) {
+            }
+        }
+    }
+
+    fun manageChannels(roomId: String, action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                action()
+            } catch (error: ApiError) {
+                notice = error.message
+            }
+            loadChannels(roomId)
+        }
+    }
+
+    fun openChannel(group: Chat, channel: RoomChannel, user: User) {
+        app.channels.saveOpenChannel(group.id, channel.id)
+        if (channel.id == group.id) {
+            openChat(group, user)
+            return
+        }
+        room?.close()
+        selectedGroupId = group.id
+        openGroupId = group.id
+        openChannelName = channel.name
+        room = ChatRoom(
+            opened = group.copy(
+                id = channel.id,
+                lastReadId = channel.lastReadId,
+                peerLastReadId = channel.readUpTo,
+                unreadCount = channel.unreadCount,
+            ),
+            userId = user.id,
+            repository = app.chats,
+            rooms = app.rooms,
+            posts = app.posts,
+            realtime = realtime,
+            parent = viewModelScope,
+            onChatGone = {
+                closeChat()
+                refresh()
+            },
+            onChatChanged = ::refresh,
+            groupId = group.id,
+        )
+    }
+
     fun openChat(chat: Chat, user: User, focusInput: Boolean = false, focusId: String? = null) {
         room?.close()
+        openGroupId = null
+        openChannelName = if (chat.kind == "group") channelLists[chat.id]?.channels?.firstOrNull { it.id == chat.id }?.name ?: "general" else null
+        if (chat.kind == "group") selectedGroupId = chat.id
         room = ChatRoom(
             opened = chat,
             userId = user.id,
             repository = app.chats,
             rooms = app.rooms,
+            posts = app.posts,
             realtime = realtime,
             parent = viewModelScope,
             onChatGone = {
@@ -247,6 +333,8 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     fun closeChat() {
         room?.close()
         room = null
+        openGroupId = null
+        openChannelName = null
     }
 
     @OptIn(FlowPreview::class)
@@ -257,8 +345,19 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
             .onEach { refresh() }
             .launchIn(viewModelScope)
         realtime.events
+            .filter { it.name == "presence" }
+            .onEach { event ->
+                val data = event.data ?: return@onEach
+                presence[data.optString("userId")] = Presence(data.optBoolean("online"), data.optBoolean("hidden"), System.currentTimeMillis())
+            }
+            .launchIn(viewModelScope)
+        realtime.events
             .filter { it.name == "room.changed" }
             .onEach { roomTick += 1 }
+            .launchIn(viewModelScope)
+        realtime.events
+            .filter { it.name == "room.channels" }
+            .onEach { event -> event.data?.optString("chatId")?.takeIf { it.isNotEmpty() }?.let(::loadChannels) }
             .launchIn(viewModelScope)
     }
 
@@ -269,9 +368,10 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
                 all = list
                 failed = false
                 val current = room
-                val opened = list.firstOrNull { it.id == current?.chatId }
+                val opened = list.firstOrNull { it.id == (openGroupId ?: current?.chatId) }
                 if (current != null && opened == null) closeChat()
-                if (opened != null) current?.chatUpdated(opened)
+                if (opened != null && openGroupId == null) current?.chatUpdated(opened)
+                list.firstOrNull { it.id == shownGroup?.id && it.status == "active" }?.let { loadChannels(it.id) }
             } catch (error: ApiError) {
                 if (error.status == 401) sessionLost = true else failed = true
             } finally {

@@ -13,6 +13,8 @@ class UserController : public drogon::HttpController<UserController>
     METHOD_LIST_BEGIN
     ADD_METHOD_TO(UserController::search, "/v1/users/search", drogon::Get, "core::auth::AuthFilter");
     ADD_METHOD_TO(UserController::updateProfile, "/v1/users/me", drogon::Patch, "core::auth::AuthFilter");
+    ADD_METHOD_TO(UserController::privacy, "/v1/users/me/privacy", drogon::Get, "core::auth::AuthFilter");
+    ADD_METHOD_TO(UserController::setPrivacy, "/v1/users/me/privacy", drogon::Patch, "core::auth::AuthFilter");
     ADD_METHOD_TO(UserController::changePassword, "/v1/users/me/password", drogon::Post, "core::auth::AuthFilter");
     ADD_METHOD_TO(UserController::disable, "/v1/users/me/disable", drogon::Post, "core::auth::AuthFilter");
     ADD_METHOD_TO(UserController::deleteAccount, "/v1/users/me/delete", drogon::Post, "core::auth::AuthFilter");
@@ -20,6 +22,8 @@ class UserController : public drogon::HttpController<UserController>
 
     drogon::Task<drogon::HttpResponsePtr> search(drogon::HttpRequestPtr request);
     drogon::Task<drogon::HttpResponsePtr> updateProfile(drogon::HttpRequestPtr request);
+    drogon::Task<drogon::HttpResponsePtr> privacy(drogon::HttpRequestPtr request);
+    drogon::Task<drogon::HttpResponsePtr> setPrivacy(drogon::HttpRequestPtr request);
     drogon::Task<drogon::HttpResponsePtr> changePassword(drogon::HttpRequestPtr request);
     drogon::Task<drogon::HttpResponsePtr> disable(drogon::HttpRequestPtr request);
     drogon::Task<drogon::HttpResponsePtr> deleteAccount(drogon::HttpRequestPtr request);

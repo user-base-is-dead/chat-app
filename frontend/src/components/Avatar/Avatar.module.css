@@ -18,6 +18,11 @@
     object-fit: cover;
 }
 
+.blank {
+    background: var(--avatar-blank);
+    color: var(--avatar-blank-icon);
+}
+
 .disabled {
     background: var(--surface-strong);
     color: var(--muted-icon);

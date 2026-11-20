@@ -1,5 +1,7 @@
 package com.meghnathnews.mironchat.ui.auth
 
+import com.meghnathnews.mironchat.ui.theme.BubbleBorder
+import androidx.compose.foundation.border
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -123,6 +125,7 @@ private fun AuthForm(onLogin: (User) -> Unit, model: AuthViewModel) {
                 .padding(horizontal = 16.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Panel)
+                .border(1.dp, BubbleBorder, RoundedCornerShape(24.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -219,8 +222,8 @@ private fun Brand() {
         )
         Text(
             text = buildAnnotatedString {
-                append("Every chat\nhas its own\n")
-                withStyle(SpanStyle(color = Chroma)) { append("color.") }
+                append("Simple chats\nwith your\n")
+                withStyle(SpanStyle(color = Chroma)) { append("people.") }
             },
             color = Ink,
             fontSize = 34.sp,
@@ -251,7 +254,8 @@ private fun ModeTabs(mode: AuthMode, onChange: (AuthMode) -> Unit) {
                 .width(tabWidth)
                 .fillMaxHeight()
                 .clip(CircleShape)
-                .background(Panel),
+                .background(Panel)
+                .border(1.dp, BubbleBorder, CircleShape),
         )
         Row(modifier = Modifier.fillMaxSize()) {
             AuthMode.entries.forEach { item ->

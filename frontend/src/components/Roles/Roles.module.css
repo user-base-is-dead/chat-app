@@ -1,0 +1,266 @@
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.fields:disabled {
+    opacity: 0.7;
+}
+
+.note {
+    margin: 0 0 4px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+}
+
+.empty {
+    margin: 12px 0;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.newRole {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+    color: var(--accent);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.newRole svg {
+    width: 20px;
+    height: 20px;
+}
+
+.roleRow,
+.checkRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.roleRow:hover,
+.checkRow:hover {
+    background: var(--surface);
+}
+
+.locked {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.locked:hover {
+    background: transparent;
+}
+
+.dot {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+.roleName {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.count {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.chevron {
+    display: flex;
+    color: var(--muted-icon);
+}
+
+.chevron svg {
+    width: 18px;
+    height: 18px;
+}
+
+.check {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+}
+
+.block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.blockTitle {
+    padding-left: 4px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.swatches {
+    display: grid;
+    grid-template-columns: repeat(7, 32px);
+    gap: 10px;
+    padding: 6px 4px;
+}
+
+.swatch,
+.swatchNone {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.swatchNone {
+    border-color: var(--border-strong);
+    background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--panel);
+}
+
+.swatchOn {
+    box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text);
+}
+
+.switchRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 4px;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.switchText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.hint {
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.switch {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 26px;
+    margin: 0;
+    border-radius: 13px;
+    background: var(--surface-strong);
+    cursor: pointer;
+}
+
+.switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.switch:checked {
+    background: var(--accent);
+}
+
+.switch:checked::after {
+    transform: translateX(16px);
+}
+
+.moves {
+    display: flex;
+    gap: 10px;
+}
+
+.move {
+    flex: 1;
+    height: 42px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.move:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--danger);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.delete svg {
+    width: 20px;
+    height: 20px;
+}
