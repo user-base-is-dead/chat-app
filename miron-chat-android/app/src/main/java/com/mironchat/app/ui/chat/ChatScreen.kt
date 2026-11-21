@@ -361,7 +361,7 @@ fun ChatScreen(
                     state = listState,
                     reverseLayout = true,
                     userScrollEnabled = !picking,
-                    verticalArrangement = Arrangement.spacedBy(if (flat) 0.dp else 3.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (flat) 0.dp else 3.dp, Alignment.Bottom),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HeaderSpace, bottom = 8.dp),
                     modifier = Modifier
                         .fillMaxSize()
@@ -430,7 +430,7 @@ fun ChatScreen(
                                 Box(
                                     modifier = Modifier.animateItem(
                                         fadeInSpec = null,
-                                        placementSpec = softSpring(IntOffset.VisibilityThreshold),
+                                        placementSpec = null,
                                     ),
                                 ) {
                                 if (flat) {

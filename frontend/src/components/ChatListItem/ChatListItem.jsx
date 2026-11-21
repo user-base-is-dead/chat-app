@@ -52,6 +52,7 @@ function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, wi
         <div
             className={[active ? styles.itemActive : styles.item, leaving && styles.leaving].filter(Boolean).join(' ')}
             ref={itemRef}
+            data-zone="chat"
             data-chat-id={chat.id}
             style={{ ...chatStyle(chat), '--i': Math.min(index, 12) }}
             onClick={onClick}

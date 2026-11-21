@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { inSidebar } from '../../utils/zone'
 import styles from './Sidebar.module.css'
 import SearchIcon from '../Icons/SearchIcon'
 import CloseIcon from '../Icons/CloseIcon'
@@ -88,13 +89,22 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
     }, [])
 
     useEffect(() => {
-        if (!(requestsOpen || findKind || createKind) || selectedChatId) return
+        const searching = searchOpen && activeTab === 'chats' && !requestsOpen
+        if (!(requestsOpen || findKind || createKind || searching)) return
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape') window.history.back()
+            if (e.key !== 'Escape' || e.defaultPrevented) return
+            if (selectedChatId && !inSidebar()) return
+            e.preventDefault()
+            if (searching) {
+                setSearchOpen(false)
+                onSearchChange('')
+            } else {
+                window.history.back()
+            }
         }
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [requestsOpen, findKind, createKind, selectedChatId])
+    }, [requestsOpen, findKind, createKind, selectedChatId, searchOpen, activeTab])
 
     const openRequests = () => {
         window.history.pushState({ requestsOpen: true }, '')
@@ -186,9 +196,6 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                     placeholder="Search people and messages"
                                     value={search}
                                     onChange={(e) => onSearchChange(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Escape') closeSearch()
-                                    }}
                                 />
                                 {search && (
                                     <button className={styles.searchClear} type="button" aria-label="Clear" onClick={() => onSearchChange('')}>
@@ -301,16 +308,6 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                 )}
                 {!covered && !fullSearch && activeTab === 'chats' && !requestsOpen && (
                     <>
-                        <button className={styles.requestsRow} type="button" onClick={openRequests}>
-                            <span className={styles.requestsIcon}><RequestsIcon /></span>
-                            <span className={styles.requestsText}>
-                                <span className={styles.requestsLabel}>Message Requests</span>
-                                <span className={styles.requestsHint}>
-                                    {requests.length > 0 ? `${requests.length} new ${requests.length === 1 ? 'request' : 'requests'}` : 'New & Restricted chats'}
-                                </span>
-                            </span>
-                            {requests.length > 0 && <span className={styles.requestsCount}>{requests.length}</span>}
-                        </button>
                         <div className={styles.folders}>
                             {folders.map((folder) => (
                                 <button
@@ -324,6 +321,16 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                 </button>
                             ))}
                         </div>
+                        <button className={styles.requestsRow} type="button" onClick={openRequests}>
+                            <span className={styles.requestsIcon}><RequestsIcon /></span>
+                            <span className={styles.requestsText}>
+                                <span className={styles.requestsLabel}>Message Requests</span>
+                                <span className={styles.requestsHint}>
+                                    {requests.length > 0 ? `${requests.length} new ${requests.length === 1 ? 'request' : 'requests'}` : 'New & Restricted chats'}
+                                </span>
+                            </span>
+                            {requests.length > 0 && <span className={styles.requestsCount}>{requests.length}</span>}
+                        </button>
                         <div className={styles.list}>
                             {loading && <ChatListSkeleton />}
                             {!loading && chats.length === 0 && <div className={styles.noResults}>No chats found</div>}

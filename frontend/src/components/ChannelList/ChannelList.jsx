@@ -163,6 +163,7 @@ function ChannelList({ room, list, openId, canManage, onOpen, onOpenInfo, onChan
                 className={classes}
                 type="button"
                 aria-current={channel.id === openId}
+                data-zone="chat"
                 onClick={() => onOpen(channel)}
                 onContextMenu={channelItems(channel, {}).length > 0 ? (e) => openAt(e, (at) => channelItems(channel, at)) : undefined}
             >

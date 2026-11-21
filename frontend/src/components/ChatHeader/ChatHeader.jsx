@@ -39,11 +39,11 @@ function ChatHeader({ chat, channelName, typing, typingName, onBack, onOpenInfo,
 
     return (
         <div className={styles.header}>
-            <button className={styles.backButton} onClick={onBack}>
+            <button className={styles.backButton} type="button" aria-label="Back" onClick={onBack}>
                 <BackIcon />
             </button>
             <button className={styles.peer} type="button" onClick={onOpenInfo}>
-                <Avatar name={chat.name} photo={chat.photo} size={44} disabled={chat.peerDisabled} deleted={chat.peerDeleted} morphTarget />
+                <Avatar name={chat.name} photo={chat.photo} size={46} disabled={chat.peerDisabled} deleted={chat.peerDeleted} morphTarget />
                 <div className={styles.peerText}>
                     <div className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>{channelName ? `# ${channelName}` : chat.name}</div>
                     <div className={styles.status}>

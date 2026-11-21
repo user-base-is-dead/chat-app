@@ -5,22 +5,26 @@
     position: relative;
     z-index: 3;
     flex-shrink: 0;
-    height: 64px;
-    padding: 0 12px 0 10px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    padding: 10px 12px 6px;
+    background: transparent;
+}
+
+.backButton,
+.peer,
+.actions {
+    height: 56px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .backButton {
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 56px;
     flex-shrink: 0;
-    border: none;
     border-radius: 50%;
-    background: transparent;
     color: var(--text);
     cursor: pointer;
     transition: background 0.2s, transform 0.25s var(--ease-spring);
@@ -33,15 +37,20 @@
 
 @media (max-width: 768px) {
     .header {
-        height: 60px;
-        padding-left: 4px;
-        padding-right: 6px;
-        gap: 2px;
+        padding: 8px 8px 4px;
+        gap: 6px;
+    }
+
+    .backButton,
+    .peer,
+    .actions {
+        height: 50px;
     }
 
     .backButton {
-        display: flex;
+        width: 50px;
     }
+
 }
 
 .peer {
@@ -50,10 +59,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 5px 12px 5px 5px;
-    border: none;
+    padding: 0 14px 0 4px;
     border-radius: 999px;
-    background: transparent;
     text-align: left;
     font: inherit;
     cursor: pointer;
@@ -61,7 +68,7 @@
 }
 
 .peer:hover {
-    background: var(--surface);
+    background: var(--panel);
 }
 
 .peerText {
@@ -102,8 +109,10 @@
 .actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     flex-shrink: 0;
+    padding: 0 6px;
+    border-radius: 999px;
 }
 
 .action {

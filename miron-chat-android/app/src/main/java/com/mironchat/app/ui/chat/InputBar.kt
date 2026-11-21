@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,13 +69,24 @@ import com.mironchat.app.ui.theme.Surface
 import com.mironchat.app.ui.theme.bouncySpring
 import com.mironchat.app.ui.theme.pressScale
 import com.mironchat.app.ui.theme.softSpring
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.runtime.snapshotFlow
 
-private const val KEYBOARD_RISE = 350L
+private const val KEYBOARD_RISE = 900L
+private const val KEYBOARD_SETTLE = 120L
+private const val INPUT_PREFS = "input"
+private const val KEYBOARD_KEY = "keyboard_height"
 private val BarShape = RoundedCornerShape(28.dp)
 private val PanelStart = 300.dp
-private val PanelMin = 260.dp
-private val PanelMax = 360.dp
+private val PanelFloor = 150.dp
+private val PanelMax = 520.dp
 private val PanelWithKeyboard = 240.dp
 
 private fun TextFieldValue.replaced(start: Int, end: Int, text: String): TextFieldValue {
@@ -95,6 +104,7 @@ private fun TextFieldValue.deletedBefore(): TextFieldValue {
     return replaced(start, end, "")
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun InputBar(
     focus: FocusRequester,
@@ -106,11 +116,15 @@ fun InputBar(
     var emojiOpen by remember { mutableStateOf(false) }
     var emojiSearching by remember { mutableStateOf(false) }
     var keyboardRising by remember { mutableStateOf(false) }
-    var panelHeight by remember { mutableStateOf(PanelStart) }
+    val context = LocalContext.current
+    val saved = remember { context.getSharedPreferences(INPUT_PREFS, Context.MODE_PRIVATE) }
+    var panelHeight by remember { mutableStateOf(saved.getFloat(KEYBOARD_KEY, 0f).takeIf { it > 0f }?.dp ?: PanelStart) }
     val keyboard = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val navInsets = WindowInsets.navigationBars
     val keyboardHeight = with(density) {
-        (WindowInsets.ime.getBottom(this) - WindowInsets.navigationBars.getBottom(this)).coerceAtLeast(0).toDp()
+        (imeInsets.getBottom(this) - navInsets.getBottom(this)).coerceAtLeast(0).toDp()
     }
     val ready = value.text.isNotBlank()
     val sendSource = remember { MutableInteractionSource() }
@@ -125,15 +139,32 @@ fun InputBar(
         }
     }
 
-    SideEffect {
-        if (keyboardHeight > panelHeight || panelHeight == PanelStart && keyboardHeight > PanelMin) {
-            panelHeight = keyboardHeight.coerceIn(PanelMin, PanelMax)
+    val keyboardFlow = remember(density, imeInsets, navInsets) {
+        snapshotFlow {
+            with(density) { (imeInsets.getBottom(this) - navInsets.getBottom(this)).coerceAtLeast(0).toDp() }
         }
+    }
+    val fitPanel: (Dp) -> Unit = { height ->
+        if (height >= PanelFloor) {
+            val next = height.coerceAtMost(PanelMax)
+            if (next != panelHeight) {
+                panelHeight = next
+                saved.edit().putFloat(KEYBOARD_KEY, next.value).apply()
+            }
+        }
+    }
+
+    LaunchedEffect(keyboardFlow) {
+        keyboardFlow.debounce(KEYBOARD_SETTLE).collect { fitPanel(it) }
     }
 
     LaunchedEffect(keyboardRising) {
         if (!keyboardRising) return@LaunchedEffect
-        delay(KEYBOARD_RISE)
+        val settled = withTimeoutOrNull(KEYBOARD_RISE) {
+            keyboardFlow.first { it > 0.dp }
+            keyboardFlow.debounce(KEYBOARD_SETTLE).first()
+        }
+        if (settled != null) fitPanel(settled)
         keyboardRising = false
     }
 
@@ -232,18 +263,23 @@ fun InputBar(
         }
         if (emojiOpen || keyboardRising) {
             val searching = emojiSearching && keyboardHeight > 0.dp
-            val slot = if (searching) PanelWithKeyboard else (panelHeight - keyboardHeight).coerceAtLeast(0.dp)
+            val full = if (searching) PanelWithKeyboard else panelHeight
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(slot)
-                    .clipToBounds(),
+                    .clipToBounds()
+                    .layout { measurable, constraints ->
+                        val keyboardPx = (imeInsets.getBottom(this) - navInsets.getBottom(this)).coerceAtLeast(0)
+                        val slot = if (searching) full.roundToPx() else (full.roundToPx() - keyboardPx).coerceAtLeast(0)
+                        val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+                        layout(constraints.maxWidth, slot) { placeable.place(0, 0) }
+                    },
             ) {
                 EmojiPanel(
                     onPick = { emoji -> value = value.replaced(value.selection.min, value.selection.max, emoji) },
                     onBackspace = { value = value.deletedBefore() },
                     onSearchFocus = { emojiSearching = it },
-                    modifier = Modifier.requiredHeight(if (searching) PanelWithKeyboard else panelHeight),
+                    modifier = Modifier.height(full),
                 )
             }
         }

@@ -16,6 +16,7 @@ import JoinDialog from '../../components/JoinDialog/JoinDialog'
 import Toast from '../../components/Toast/Toast'
 import { chatStyle } from '../../utils/chroma'
 import { animateChange, isPhone, morphChange } from '../../utils/motion'
+import { inSidebar } from '../../utils/zone'
 import {
     acceptChat,
     deleteChat as removeChat,
@@ -302,7 +303,8 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     useEffect(() => {
         if (!selectedChatId) return
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape') window.history.back()
+            if (e.key !== 'Escape' || e.defaultPrevented || inSidebar()) return
+            window.history.back()
         }
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
@@ -735,7 +737,10 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     }
 
     const openInfo = () => {
-        if (infoOpen) return
+        if (infoOpen) {
+            window.history.back()
+            return
+        }
         window.history.pushState({ infoOpen: true }, '')
         setInfoOpen(true)
     }
@@ -1060,7 +1065,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
 
     return (
         <div className={[styles.layout, selectedChat && styles.chatOpen, selectedChat && infoOpen && styles.infoOpen].filter(Boolean).join(' ')}>
-            <div className={styles.sidebarArea}>
+            <div className={styles.sidebarArea} data-zone="sidebar">
                 <Sidebar
                     user={user}
                     onUserChange={onUserChange}
@@ -1112,7 +1117,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             channelName={channelLabel}
                             typing={(typingUntil[selectedChat.id] ?? 0) > 0}
                             typingName={typingNames[selectedChat.id]}
-                            onBack={() => window.history.back()}
+                            onBack={() => window.history.go(window.history.state?.infoOpen ? -2 : -1)}
                             onOpenInfo={openInfo}
                             onCall={() => showToast('Calls coming soon')}
                             onSearch={focusSearch}
