@@ -1,8 +1,11 @@
 #include <drogon/drogon.h>
 
+#include "core/app/AppVersions.h"
 #include "core/config/Settings.h"
+#include "core/http/ApiError.h"
 #include "core/database/Database.h"
 #include "core/security/Password.h"
+#include "features/realtime/Hub.h"
 
 int main()
 {
@@ -32,6 +35,28 @@ int main()
                 });
         },
         {drogon::Get});
+
+    drogon::app().registerPostRoutingAdvice(
+        [](const drogon::HttpRequestPtr &request, drogon::AdviceCallback &&stop, drogon::AdviceChainCallback &&next) {
+            const auto &path = request->path();
+            const bool open = path == "/v1/health" || path == "/v1/app/version" || path.rfind("/v1/app/download/", 0) == 0 || path == "/v1/ws" ||
+                              (request->method() == drogon::Get && path.rfind("/v1/media/", 0) == 0);
+            if (open || core::app::allowed(request->getHeader("x-app-platform"), request->getHeader("x-app-version")))
+            {
+                next();
+                return;
+            }
+            stop(core::http::errorResponse(core::http::ApiError(
+                drogon::k426UpgradeRequired, "update_required", "Please update Miron Chat to keep using it")));
+        });
+    drogon::app().registerBeginningAdvice([] {
+        core::app::onVersionChange([](const std::string &platform) {
+            Json::Value data;
+            data["platform"] = platform;
+            features::realtime::hub().broadcast("app.version", data);
+        });
+        core::app::startVersionWatch();
+    });
 
     drogon::app().run();
 }

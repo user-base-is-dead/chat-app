@@ -11,6 +11,7 @@ import EmojiIcon from '../Icons/EmojiIcon'
 import CommentIcon from '../Icons/CommentIcon'
 import { REACTIONS } from '../../utils/reactions'
 import { messageMenuItems } from './messageMenu'
+import { dateTime } from '../../utils/dayLabel'
 
 const statusIcons = {
     sending: ClockIcon,
@@ -28,7 +29,7 @@ function StatusIcon({ status }) {
     )
 }
 
-function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, channel, stats, canManagePosts, onReact, onOpenComments, onToggleSwitch, onResend, onDelete }) {
+function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, channel, stats, canManagePosts, selecting, selected, onSelect, onReact, onOpenComments, onToggleSwitch, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
     const tailClip = useId()
     const bubbleRef = useRef(null)
@@ -47,6 +48,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
         message.leaving && styles.leaving,
         focused && styles.focused,
         showSender && styles.indented,
+        selected && styles.selected,
     ].filter(Boolean).join(' ')
 
     const senderName = channel ? channel.name : message.senderName || 'Deleted Account'
@@ -56,7 +58,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
         { label: stats.allowComments ? 'Turn off comments' : 'Turn on comments', Icon: CommentIcon, onClick: () => onToggleSwitch('allowComments') },
     ] : []
 
-    const baseItems = messageMenuItems({ message, canDeleteOthers, onResend, onDelete })
+    const baseItems = messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })
     const deleteLabel = (item) => item.label === 'Delete'
     const items = [...baseItems.filter((item) => !deleteLabel(item)), ...switchItems, ...baseItems.filter(deleteLabel)]
 
@@ -79,6 +81,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
 
     const openMenu = (e) => {
         e.preventDefault()
+        if (selecting) return
         setMenu({ x: e.clientX, y: e.clientY })
     }
 
@@ -88,7 +91,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
             {showSender && groupEnd && <span className={styles.senderAvatar}><Avatar name={senderName} photo={channel?.photo} size={32} /></span>}
             <span className={styles.text}>{message.text}</span>
             {post ? (
-                <PostFooter stats={stats} time={message.time} onReact={onReact} onOpenComments={onOpenComments} />
+                <PostFooter stats={stats} time={message.createdAt ? dateTime(message.createdAt) : message.time} onReact={onReact} onOpenComments={onOpenComments} />
             ) : (
                 <span className={styles.meta}>
                     <span className={styles.time}>{message.time}</span>

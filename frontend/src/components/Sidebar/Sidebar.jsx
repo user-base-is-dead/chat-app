@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './Sidebar.module.css'
 import SearchIcon from '../Icons/SearchIcon'
+import CloseIcon from '../Icons/CloseIcon'
+import ConfirmDialog from '../ConfirmDialog/ConfirmDialog'
+import { AlertButtons, AlertsPage } from '../AppAlerts/AppAlerts'
 import ChatListItem from '../ChatListItem/ChatListItem'
 import ChatListSkeleton from '../Skeleton/ChatListSkeleton'
 import BottomTabs from '../BottomTabs/BottomTabs'
@@ -23,12 +26,34 @@ const folders = [{ id: 'all', label: 'General' }]
 const PIN_LIMIT = 5
 const tabKinds = { groups: 'group', channels: 'channel' }
 const titles = { chats: 'Chats', groups: 'Groups', channels: 'Channels', settings: 'Settings' }
+const RECENT_KEY = 'recentSearches'
+const RECENT_LIMIT = 15
+
+function loadRecent() {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    } catch {
+        return []
+    }
+}
+
+function saveRecent(ids) {
+    try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, RECENT_LIMIT)))
+    } catch {
+        return
+    }
+}
 
 function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, restricted, searchResults, selectedChatId, getLastMessage, search, searchFocus, onSearchChange, onSelectChat, onOpenMessage, onStartChat, onPinChat, onMuteChat, onRestrictChat, onUnrestrictChat, onDeleteChat, onLogout, rooms, knownPeople, roomPinnedCount, onRoomCreated, onOpenRoom, onOpenKey, onLeaveRoom, onDeleteRoom, onAcceptInvite, onDeclineInvite, railGroup, channelList, onSelectGroup, onOpenChannel, onOpenGroupInfo, onChannelsChanged, onNotice }) {
     const [activeTab, setActiveTab] = useState('chats')
     const [activeFolder, setActiveFolder] = useState('all')
     const [requestsOpen, setRequestsOpen] = useState(false)
     const [requestsTab, setRequestsTab] = useState('requests')
+    const [alertsOpen, setAlertsOpen] = useState(false)
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [recentIds, setRecentIds] = useState(loadRecent)
+    const [askClear, setAskClear] = useState(false)
     const [findKind, setFindKind] = useState(null)
     const [createKind, setCreateKind] = useState(null)
     const searchRef = useRef(null)
@@ -38,6 +63,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
         if (!searchFocus) return
         wantSearch.current = true
         setActiveTab('chats')
+        setSearchOpen(true)
     }, [searchFocus])
 
     useEffect(() => {
@@ -45,6 +71,11 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
         wantSearch.current = false
         searchRef.current.focus()
     })
+
+    useEffect(() => {
+        setAlertsOpen(false)
+        setSearchOpen(false)
+    }, [activeTab])
 
     useEffect(() => {
         const handlePopState = () => {
@@ -100,12 +131,120 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
 
     const inRequests = activeTab === 'chats' && requestsOpen
     const title = inRequests ? 'New & Restricted' : titles[activeTab]
+    const fullSearch = searchOpen && activeTab === 'chats' && !requestsOpen
+    const known = [...chats, ...requests, ...restricted, ...rooms]
+    const recentChats = recentIds.map((id) => known.find((chat) => chat.id === id)).filter(Boolean)
+
+    const remember = (chat) => {
+        const next = [chat.id, ...recentIds.filter((id) => id !== chat.id)]
+        setRecentIds(next)
+        saveRecent(next)
+    }
+    const forget = (chat) => {
+        const next = recentIds.filter((id) => id !== chat.id)
+        setRecentIds(next)
+        saveRecent(next)
+    }
+    const forgetAll = () => {
+        setRecentIds([])
+        saveRecent([])
+    }
+    const openSearch = () => {
+        setSearchOpen(true)
+        wantSearch.current = true
+    }
+    const closeSearch = () => {
+        setSearchOpen(false)
+        onSearchChange('')
+    }
+    const pickChat = (chat) => {
+        remember(chat)
+        onSelectChat(chat)
+    }
+    const pickMessage = (chat, messageId) => {
+        remember(chat)
+        onOpenMessage(chat, messageId)
+    }
 
     return (
         <div className={styles.sidebar}>
             <BottomTabs user={user} activeTab={activeTab} onChange={setActiveTab} />
             <div className={styles.panel}>
-                {!covered && (
+                {alertsOpen && <AlertsPage onBack={() => setAlertsOpen(false)} />}
+                {fullSearch && (
+                    <div className={styles.searchPage}>
+                        <div className={styles.searchTop}>
+                            <button className={styles.requestsBack} type="button" aria-label="Back" onClick={closeSearch}>
+                                <BackIcon />
+                            </button>
+                            <label className={`${styles.searchBox} ${styles.searchBoxWide}`}>
+                                <span className={styles.searchIcon}><SearchIcon /></span>
+                                <input
+                                    ref={searchRef}
+                                    className={styles.search}
+                                    type="text"
+                                    placeholder="Search people and messages"
+                                    value={search}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') closeSearch()
+                                    }}
+                                />
+                                {search && (
+                                    <button className={styles.searchClear} type="button" aria-label="Clear" onClick={() => onSearchChange('')}>
+                                        <CloseIcon />
+                                    </button>
+                                )}
+                            </label>
+                        </div>
+                        {!searching && recentChats.length === 0 && <div className={styles.noResults}>Search for people, groups and messages</div>}
+                        {!searching && recentChats.length > 0 && (
+                            <div className={styles.list}>
+                                <div className={styles.recentHead}>
+                                    <span>Recent</span>
+                                    <button className={styles.recentClear} type="button" onClick={() => setAskClear(true)}>Clear all</button>
+                                </div>
+                                {recentChats.map((chat) => (
+                                    <div key={chat.id} className={styles.recentRow}>
+                                        <button className={styles.recentOpen} type="button" onClick={() => pickChat(chat)}>
+                                            <Avatar name={chat.name} photo={chat.photo} size={44} />
+                                            <span className={styles.recentText}>
+                                                <span className={styles.recentName}>{chat.name}</span>
+                                                {chat.username && <span className={styles.recentUser}>@{chat.username}</span>}
+                                            </span>
+                                        </button>
+                                        <button className={styles.recentRemove} type="button" aria-label={`Remove ${chat.name}`} onClick={() => forget(chat)}>
+                                            <CloseIcon />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {searching && (
+                            <div className={styles.list}>
+                                {searchResults.chats.length === 0 && searchResults.messages.length === 0 && <div className={styles.noResults}>No results</div>}
+                                {searchResults.chats.length > 0 && <div className={styles.sectionTitle}>Chats</div>}
+                                {searchResults.chats.map(({ chat, lastMessage }, index) => (
+                                    <ChatListItem key={chat.id} chat={chat} index={index} lastMessage={lastMessage} active={chat.id === selectedChatId} query={search} onClick={() => pickChat(chat)} />
+                                ))}
+                                {searchResults.messages.length > 0 && <div className={styles.sectionTitle}>Messages</div>}
+                                {searchResults.messages.map(({ chat, message }, index) => (
+                                    <ChatListItem key={`${chat.id}-${message.id}`} chat={chat} index={index} lastMessage={message} query={search} onClick={() => pickMessage(chat, message.id)} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+                {askClear && (
+                    <ConfirmDialog
+                        title="Clear recent searches?"
+                        text="All recent searches will be removed from this browser."
+                        confirmLabel="Clear all"
+                        onConfirm={forgetAll}
+                        onClose={() => setAskClear(false)}
+                    />
+                )}
+                {!covered && !fullSearch && (
                     <div className={styles.header}>
                         <div className={styles.titleRow}>
                             {inRequests && (
@@ -114,8 +253,15 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                 </button>
                             )}
                             <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : styles.title}>{title}</h1>
+                            {!inRequests && activeTab !== 'settings' && <AlertButtons onOpen={() => setAlertsOpen(true)} />}
                         </div>
-                        {activeTab !== 'settings' && (
+                        {activeTab === 'chats' && !inRequests && (
+                            <button className={styles.searchFake} type="button" onClick={openSearch}>
+                                <span className={styles.searchFakeIcon}><SearchIcon /></span>
+                                Search your chats
+                            </button>
+                        )}
+                        {activeTab !== 'settings' && activeTab !== 'chats' && (
                             <label className={styles.searchBox}>
                                 <span className={styles.searchIcon}><SearchIcon /></span>
                                 <input ref={searchRef} className={styles.search} type="text" placeholder={`Search your ${titles[activeTab].toLowerCase()}`} value={search} onChange={(e) => onSearchChange(e.target.value)} />
@@ -125,7 +271,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                 )}
                 {findKind && <FindPanel kind={findKind} onStartChat={onStartChat} onOpenRoom={onOpenRoom} onOpenKey={onOpenKey} />}
                 {createKind && <RoomCreate kind={createKind} known={knownPeople} onCreated={finishCreate} />}
-                {!covered && activeTab === 'chats' && !requestsOpen && searching && (
+                {false && (
                     <div className={styles.list}>
                         {searchResults.chats.length === 0 && searchResults.messages.length === 0 && <div className={styles.noResults}>No results</div>}
                         {searchResults.chats.length > 0 && <div className={styles.sectionTitle}>Chats</div>}
@@ -153,7 +299,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                         ))}
                     </div>
                 )}
-                {!covered && activeTab === 'chats' && !requestsOpen && !searching && (
+                {!covered && !fullSearch && activeTab === 'chats' && !requestsOpen && (
                     <>
                         <button className={styles.requestsRow} type="button" onClick={openRequests}>
                             <span className={styles.requestsIcon}><RequestsIcon /></span>
@@ -226,6 +372,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                     chat={chat}
                                     index={index}
                                     lastMessage={getLastMessage(chat.id)}
+                                    withDate
                                     active={chat.id === selectedChatId}
                                     leaving={chat.leaving}
                                     onClick={() => onSelectChat(chat)}
@@ -241,6 +388,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                     chat={chat}
                                     index={index}
                                     lastMessage={getLastMessage(chat.id)}
+                                    withDate
                                     active={chat.id === selectedChatId}
                                     leaving={chat.leaving}
                                     onClick={() => onSelectChat(chat)}
@@ -322,7 +470,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                 {!covered && activeTab === 'settings' && (
                     <SettingsPage user={user} onLogout={onLogout} onUserChange={onUserChange} onAccountGone={onAccountGone} />
                 )}
-                {!covered && !requestsOpen && activeTab !== 'settings' && <ActionBubble onSelect={openFind} />}
+                {!covered && !requestsOpen && !fullSearch && !alertsOpen && activeTab !== 'settings' && <ActionBubble onSelect={openFind} />}
             </div>
         </div>
     )

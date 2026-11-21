@@ -7,6 +7,10 @@ import { initTheme } from './utils/theme'
 
 initTheme()
 
+document.addEventListener('contextmenu', (event) => {
+  if (!event.target.closest?.('input, textarea, [contenteditable="true"]')) event.preventDefault()
+})
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

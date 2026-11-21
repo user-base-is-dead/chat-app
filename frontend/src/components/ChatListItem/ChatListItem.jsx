@@ -14,7 +14,14 @@ import { formatCount } from '../../utils/formatCount'
 import { chatStyle } from '../../utils/chroma'
 import { roomLabel } from '../../utils/roomLink'
 
-function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
+const pad = (value) => String(value).padStart(2, '0')
+
+function dateTime(ms) {
+    const day = new Date(ms)
+    return `${pad(day.getDate())}/${pad(day.getMonth() + 1)}/${String(day.getFullYear()).slice(2)} ${pad(day.getHours())}:${pad(day.getMinutes())}`
+}
+
+function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, withDate, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
     const [menu, setMenu] = useState(null)
     const itemRef = useRef(null)
 
@@ -57,7 +64,7 @@ function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, on
                         <HighlightText text={chat.name} query={query} />
                         {chat.muted && <span className={styles.mutedMark}><MuteIcon /></span>}
                     </span>
-                    <span className={styles.time}>{lastMessage ? lastMessage.time : ''}</span>
+                    <span className={styles.time}>{lastMessage ? (withDate && lastMessage.createdAt ? dateTime(lastMessage.createdAt) : lastMessage.time) : ''}</span>
                 </div>
                 <div className={styles.bottom}>
                     <div className={styles.lastMessage}>{lastMessage ? <HighlightText text={`${senderPrefix}${lastMessage.text}`} query={query} /> : ''}</div>

@@ -8,6 +8,7 @@ import ClockIcon from '../Icons/ClockIcon'
 import FailedIcon from '../Icons/FailedIcon'
 import { messageMenuItems } from '../MessageBubble/messageMenu'
 import { roleColor } from '../../utils/roles'
+import { dateTime } from '../../utils/dayLabel'
 
 const statusIcons = { sending: ClockIcon, sent: TickIcon, read: DoubleTickIcon, failed: FailedIcon }
 
@@ -20,23 +21,25 @@ function Tick({ status }) {
     )
 }
 
-function GroupMessage({ message, start, focused, selfName, nameColor, canDeleteOthers, onResend, onDelete }) {
+function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, nameColor, canDeleteOthers, selecting, selected, onSelect, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
-    const name = message.mine ? selfName : message.senderName || 'Deleted Account'
+    const name = message.mine ? selfName : message.senderName || peerName || 'Deleted Account'
     const pending = message.mine && (message.status === 'sending' || message.status === 'failed')
     const tick = pending ? <Tick status={message.status} /> : null
-    const classes = [styles.row, start && styles.start, focused && styles.focused].filter(Boolean).join(' ')
+    const classes = [styles.row, start && styles.start, focused && styles.focused, selecting && styles.selecting, selected && styles.selected].filter(Boolean).join(' ')
 
     const openMenu = (e) => {
         e.preventDefault()
+        if (selecting) return
         setMenu({ x: e.clientX, y: e.clientY })
     }
 
     return (
         <div className={classes} data-message-id={message.id} onContextMenu={openMenu}>
+            <span className={styles.check} aria-hidden="true" />
             <span className={styles.side}>
                 {start ? (
-                    <Avatar name={name} size={40} />
+                    <Avatar name={name} photo={message.mine ? undefined : peerPhoto} size={40} />
                 ) : (
                     <span className={styles.sideTime}>{message.time}</span>
                 )}
@@ -45,7 +48,7 @@ function GroupMessage({ message, start, focused, selfName, nameColor, canDeleteO
                 {start && (
                     <span className={styles.head}>
                         <span className={styles.name} style={nameColor ? { color: roleColor(nameColor) } : undefined}>{name}</span>
-                        <span className={styles.time}>{message.time}</span>
+                        <span className={styles.time}>{message.createdAt ? dateTime(message.createdAt) : message.time}</span>
                         {tick}
                     </span>
                 )}
@@ -59,7 +62,7 @@ function GroupMessage({ message, start, focused, selfName, nameColor, canDeleteO
                     x={menu.x}
                     y={menu.y}
                     title={message.status === 'failed' ? 'Message not sent' : null}
-                    items={messageMenuItems({ message, canDeleteOthers, onResend, onDelete })}
+                    items={messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })}
                     onClose={() => setMenu(null)}
                 />
             )}

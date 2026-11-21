@@ -7,6 +7,7 @@ import MessageInput from '../../components/MessageInput/MessageInput'
 import ChatWelcome from '../../components/ChatWelcome/ChatWelcome'
 import RequestActions from '../../components/RequestActions/RequestActions'
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog'
+import { APP_PLATFORM, checkVersion } from '../../utils/appUpdate'
 import UnrestrictBar from '../../components/UnrestrictBar/UnrestrictBar'
 import AccountBar from '../../components/AccountBar/AccountBar'
 import UserInfo from '../../components/UserInfo/UserInfo'
@@ -247,7 +248,13 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     useEffect(() => {
         let firstReady = true
         const connection = connectRealtime({
-            onEvent: (event, data) => realtimeHandlers.current?.onEvent(event, data),
+            onEvent: (event, data) => {
+                if (event === 'app.version') {
+                    if (data?.platform === APP_PLATFORM) checkVersion()
+                    return
+                }
+                realtimeHandlers.current?.onEvent(event, data)
+            },
             onReady: () => {
                 if (firstReady) {
                     firstReady = false
@@ -1002,6 +1009,33 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         deliver(chatId, messageId, message.text)
     }
 
+    const deleteMessages = (messageIds) => {
+        const chatId = selectedChat?.id
+        const live = messageIds.filter((id) => messages.some((m) => m.id === id && !m.leaving))
+        if (live.length === 0) return
+        live.filter(isTemp).forEach((id) => dropMessage(chatId, id))
+        const sent = live.filter((id) => !isTemp(id))
+        if (sent.length === 0) return
+        setConfirm({
+            title: sent.length === 1 ? 'Delete message?' : `Delete ${sent.length} messages?`,
+            text: sent.length === 1 ? 'This message will be deleted for everyone.' : 'These messages will be deleted for everyone.',
+            action: async () => {
+                for (const id of sent) {
+                    try {
+                        const { chatDeleted } = await removeMessage(chatId, id)
+                        if (chatDeleted) {
+                            dropChat(chatId)
+                            return
+                        }
+                        dropMessage(chatId, id)
+                    } catch {
+                        continue
+                    }
+                }
+            },
+        })
+    }
+
     const deleteMessage = (messageId) => {
         const chatId = selectedChat?.id
         if (!messages.some((m) => m.id === messageId && !m.leaving)) return
@@ -1120,9 +1154,12 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             onSeen={handleSeen}
                             onResend={resendMessage}
                             onDelete={deleteMessage}
+                            onDeleteMany={deleteMessages}
                             focusId={focus?.chatId === selectedChat.id ? focus.messageId : null}
                             showSenders={selectedChat.kind === 'group'}
-                            flat={selectedChat.kind === 'group'}
+                            flat={selectedChat.kind !== 'channel'}
+                            peerName={selectedChat.kind ? '' : selectedChat.name}
+                            peerPhoto={selectedChat.kind ? '' : selectedChat.photo}
                             selfName={user.displayName || user.username}
                             hideTicks={selectedChat.kind === 'channel'}
                             canDeleteOthers={!selectedChat.kind || (channelPermissions ? channelPermissions.includes('deleteMessages') : can(selectedChat, 'deleteMessages'))}

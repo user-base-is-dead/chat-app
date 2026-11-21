@@ -4,6 +4,7 @@ import ContextMenu from '../ContextMenu/ContextMenu'
 import ConfirmDialog from '../ConfirmDialog/ConfirmDialog'
 import NameDialog from '../NameDialog/NameDialog'
 import Spinner from '../Spinner/Spinner'
+import Avatar from '../Avatar/Avatar'
 import HashIcon from '../Icons/HashIcon'
 import PlusIcon from '../Icons/PlusIcon'
 import ChevronIcon from '../Icons/ChevronIcon'
@@ -176,15 +177,22 @@ function ChannelList({ room, list, openId, canManage, onOpen, onOpenInfo, onChan
 
     return (
         <div className={styles.column}>
-            <div className={styles.head}>
-                <button className={styles.groupName} type="button" onClick={onOpenInfo}>{room.name}</button>
+            <div className={styles.banner}>
+                <button className={styles.bannerInfo} type="button" onClick={onOpenInfo}>
+                    <span className={styles.bannerPhoto}><Avatar name={room.name} photo={room.photo} size={46} /></span>
+                    <span className={styles.bannerText}>
+                        <span className={styles.groupName}>{room.name}</span>
+                        <span className={styles.members}><span className={styles.membersDot} />{room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}</span>
+                    </span>
+                </button>
                 {canManage && (
-                    <button className={styles.plus} type="button" aria-label="Add to group" onClick={(e) => openAt(e, () => groupItems)}>
+                    <button className={`${styles.plus} ${styles.plusLight}`} type="button" aria-label="Add to group" onClick={(e) => openAt(e, () => groupItems)}>
                         <PlusIcon />
                     </button>
                 )}
             </div>
             <div className={styles.list}>
+                {loose.length > 0 && <div className={styles.looseTitle}>Channels</div>}
                 {loose.map(row)}
                 {list.categories.map((category) => {
                     const closed = collapsed.includes(category.id)

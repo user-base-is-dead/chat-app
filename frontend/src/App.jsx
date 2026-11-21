@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import ChatPage from "./pages/Chat/ChatPage"
 import AuthPage from "./pages/Auth/AuthPage"
 import Splash from "./components/Splash/Splash"
+import UpdateGate from "./components/UpdateGate/UpdateGate"
 import { currentUser, logout } from "./api/auth"
 import { clearSession, hasSession, watchSession } from "./api/client"
 import './App.css'
@@ -48,12 +49,10 @@ function App() {
     setUser(null)
   }
 
-  if (checking) return <Splash />
-
   return (
-    <>
-    {user ? <ChatPage key={user.id} user={user} onLogout={handleLogout} onUserChange={setUser} onAccountGone={handleAccountGone} /> : <AuthPage onLogin={setUser} />}
-    </>
+    <UpdateGate>
+    {checking ? <Splash /> : user ? <ChatPage key={user.id} user={user} onLogout={handleLogout} onUserChange={setUser} onAccountGone={handleAccountGone} /> : <AuthPage onLogin={setUser} />}
+    </UpdateGate>
   )
 }
 

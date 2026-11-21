@@ -24,6 +24,9 @@ void load()
     current.nodeId = custom.get("node_id", 1).asInt();
     if (current.nodeId < 0 || current.nodeId > 1023)
         throw std::runtime_error("node_id must be between 0 and 1023");
+
+    const char *envFcm = std::getenv("MIRON_FCM_KEY");
+    current.fcmKeyFile = envFcm ? envFcm : custom.get("fcm_key_file", "").asString();
 }
 
 const Settings &settings()

@@ -1,6 +1,7 @@
 #include "features/roles/RoleService.h"
 
 #include <algorithm>
+#include <cctype>
 #include <set>
 
 #include "core/http/ApiError.h"
@@ -19,6 +20,12 @@ constexpr int64_t kMaxRoles = 25;
 constexpr size_t kMaxName = 32;
 const std::set<std::string> kColors = {
     "red", "orange", "amber", "yellow", "lime", "green", "teal", "cyan", "blue", "indigo", "purple", "pink"};
+
+bool isHexColor(const std::string &value)
+{
+    return value.size() == 7 && value[0] == '#' &&
+           std::all_of(value.begin() + 1, value.end(), [](unsigned char c) { return std::isxdigit(c); });
+}
 
 ApiError notFound()
 {
@@ -46,8 +53,13 @@ RoleFields readFields(const Json::Value &body, RoleFields fields)
         const auto &color = body["color"];
         if (color.isNull() || (color.isString() && color.asString().empty()))
             fields.color.clear();
-        else if (color.isString() && kColors.contains(color.asString()))
+        else if (color.isString() && (kColors.contains(color.asString()) || isHexColor(color.asString())))
+        {
             fields.color = color.asString();
+            std::transform(fields.color.begin(), fields.color.end(), fields.color.begin(), [](unsigned char c) {
+                return static_cast<char>(std::tolower(c));
+            });
+        }
         else
             throw ApiError(drogon::k400BadRequest, "invalid_color", "Unknown colour");
     }

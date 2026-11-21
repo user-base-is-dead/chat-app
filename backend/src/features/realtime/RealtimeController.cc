@@ -1,5 +1,7 @@
 #include "features/realtime/RealtimeController.h"
 
+#include "core/app/AppVersions.h"
+
 #include <chrono>
 #include <memory>
 
@@ -21,6 +23,7 @@ namespace
 constexpr auto kAuthTimeout = 10.0;
 constexpr auto kPingInterval = std::chrono::seconds(20);
 const auto kUnauthorized = static_cast<drogon::CloseCode>(4001);
+const auto kUpdateRequired = static_cast<drogon::CloseCode>(4426);
 
 struct Session
 {
@@ -166,6 +169,11 @@ void RealtimeController::handleNewMessage(const drogon::WebSocketConnectionPtr &
     {
         if (event != "auth")
             return;
+        if (!core::app::allowed(data["platform"].asString(), data["version"].asString()))
+        {
+            connection->shutdown(kUpdateRequired, "update_required");
+            return;
+        }
         const auto claims = core::security::verifyAccessToken(data["token"].asString());
         if (!claims)
         {

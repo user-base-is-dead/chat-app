@@ -56,4 +56,28 @@ drogon::Task<> DeviceRepository::removeOthersForUser(int64_t userId, int64_t kee
     co_await core::database::client()->execSqlCoro(
         "DELETE FROM devices WHERE user_id = $1 AND id <> $2", userId, keepDeviceId);
 }
+
+drogon::Task<> DeviceRepository::setPushToken(int64_t id, std::string token)
+{
+    if (!token.empty())
+        co_await core::database::client()->execSqlCoro(
+            "UPDATE devices SET push_token = NULL WHERE push_token = $1 AND id <> $2", token, id);
+    co_await core::database::client()->execSqlCoro(
+        "UPDATE devices SET push_token = NULLIF($2, '') WHERE id = $1", id, token);
+}
+
+drogon::Task<> DeviceRepository::clearPushToken(std::string token)
+{
+    co_await core::database::client()->execSqlCoro("UPDATE devices SET push_token = NULL WHERE push_token = $1", token);
+}
+
+drogon::Task<std::vector<std::string>> DeviceRepository::pushTokens(int64_t userId)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT push_token FROM devices WHERE user_id = $1 AND push_token IS NOT NULL", userId);
+    std::vector<std::string> tokens;
+    for (const auto &row : result)
+        tokens.push_back(row["push_token"].as<std::string>());
+    co_return tokens;
+}
 }

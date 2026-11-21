@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <drogon/utils/coroutine.h>
 
@@ -24,5 +25,8 @@ class DeviceRepository
     drogon::Task<> remove(int64_t id);
     drogon::Task<> removeAllForUser(int64_t userId);
     drogon::Task<> removeOthersForUser(int64_t userId, int64_t keepDeviceId);
+    drogon::Task<> setPushToken(int64_t id, std::string token);
+    drogon::Task<> clearPushToken(std::string token);
+    drogon::Task<std::vector<std::string>> pushTokens(int64_t userId);
 };
 }

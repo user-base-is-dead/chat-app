@@ -10,7 +10,7 @@ import DeleteIcon from '../Icons/DeleteIcon'
 import ResendIcon from '../Icons/ResendIcon'
 import CancelIcon from '../Icons/CancelIcon'
 
-export function messageMenuItems({ message, canDeleteOthers, onResend, onDelete }) {
+export function messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect }) {
     const deleteItem = { label: 'Delete', Icon: DeleteIcon, danger: true, onClick: onDelete }
     const sent = [
         { label: 'Reply', Icon: ReplyIcon },
@@ -20,11 +20,11 @@ export function messageMenuItems({ message, canDeleteOthers, onResend, onDelete 
         { label: 'Copy Message Link', Icon: LinkIcon },
         { label: 'Pin', Icon: PinIcon },
         { label: 'Forward', Icon: ForwardIcon },
-        { label: 'Select', Icon: SelectIcon },
+        { label: 'Select', Icon: SelectIcon, onClick: onSelect },
         deleteItem,
     ]
     if (!message.mine) return sent.filter((item) => item.label !== 'Edit' && (canDeleteOthers || item !== deleteItem))
-    if (message.status === 'failed') return [{ label: 'Resend', Icon: ResendIcon, onClick: onResend }, deleteItem]
+    if (message.status === 'failed') return [{ label: 'Resend', Icon: ResendIcon, onClick: onResend }, { label: 'Select', Icon: SelectIcon, onClick: onSelect }, deleteItem]
     if (message.status === 'sending') return [{ label: 'Cancel Sending', Icon: CancelIcon, onClick: onDelete }, deleteItem]
     return sent
 }

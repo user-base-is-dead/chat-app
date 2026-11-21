@@ -1,3 +1,5 @@
+import { APP_PLATFORM, APP_VERSION, markUpdateRequired } from '../utils/appUpdate'
+
 const ACCESS_KEY = 'miron.accessToken'
 const REFRESH_KEY = 'miron.refreshToken'
 
@@ -53,7 +55,7 @@ export function accessToken() {
 }
 
 export async function send(path, { method = 'GET', body, raw, token } = {}) {
-    const headers = {}
+    const headers = { 'X-App-Platform': APP_PLATFORM, 'X-App-Version': APP_VERSION }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
     if (raw) headers['Content-Type'] = raw.type || 'application/octet-stream'
     if (token) headers.Authorization = `Bearer ${token}`
@@ -69,6 +71,7 @@ export async function send(path, { method = 'GET', body, raw, token } = {}) {
         throw new ApiError(0, 'network', 'Cannot reach the server. Check your connection.')
     }
 
+    if (response.status === 426) markUpdateRequired()
     if (response.status === 204) return null
     const data = await response.json().catch(() => null)
     if (!response.ok) {

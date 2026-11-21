@@ -22,7 +22,8 @@
     ],
     "custom_config": {
         "jwt_secret": "dev-only-secret-do-not-use-in-production-7f3a9c",
-        "node_id": 1
+        "node_id": 1,
+        "fcm_key_file": "config/fcm-key.json"
     },
     "app": {
         "number_of_threads": 0,

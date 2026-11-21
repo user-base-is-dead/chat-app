@@ -163,6 +163,35 @@
     background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--panel);
 }
 
+.swatchCustom {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: conic-gradient(#ff6b6b, #f5b841, #51cf66, #3bc9db, #4263eb, #cc8cf0, #ff6b6b);
+    cursor: pointer;
+}
+
+.swatchPlus {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.colorInput {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .swatchOn {
     box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text);
 }
@@ -188,6 +217,19 @@
 .hint {
     font-size: 12.5px;
     color: var(--text-muted);
+}
+
+.advanced {
+    margin-top: 6px;
+    padding: 6px 12px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.switchRow:has(.switch:disabled) {
+    cursor: default;
+    opacity: 0.6;
 }
 
 .switch {

@@ -2,7 +2,7 @@ const palette = ['#D02670', '#C2410C', '#6D4AFF', '#0E7490', '#1F6FEB', '#A21CAF
 const neutral = '#7C7A84'
 
 export const appColors = [
-    { id: 'default', label: 'Default', value: '#3A8FE6' },
+    { id: 'default', label: 'Default', value: '#D97757' },
 ]
 
 export function chromaFor(name = '') {

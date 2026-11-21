@@ -12,3 +12,6 @@ dist/
 
 google-services.json
 *firebase-adminsdk*.json
+
+backend/config/fcm-key.json
+backend/releases/

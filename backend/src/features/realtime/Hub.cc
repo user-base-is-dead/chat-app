@@ -4,6 +4,8 @@
 
 #include <json/writer.h>
 
+#include "features/push/PushSender.h"
+
 namespace features::realtime
 {
 bool Hub::add(int64_t userId, const drogon::WebSocketConnectionPtr &connection, bool visible)
@@ -40,6 +42,9 @@ bool Hub::isOnline(int64_t userId) const
 
 void Hub::send(int64_t userId, const std::string &event, const Json::Value &data) const
 {
+    if (event == "message.new" && data["senderId"].asString() != std::to_string(userId) && !isOnline(userId))
+        push::notifyNew(userId, data.get("roomId", data["chatId"]).asString());
+
     std::vector<drogon::WebSocketConnectionPtr> targets;
     {
         std::lock_guard lock(mutex_);
@@ -48,6 +53,28 @@ void Hub::send(int64_t userId, const std::string &event, const Json::Value &data
             return;
         targets.assign(it->second.begin(), it->second.end());
     }
+
+    Json::Value envelope;
+    envelope["event"] = event;
+    envelope["data"] = data;
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "";
+    const auto payload = Json::writeString(builder, envelope);
+
+    for (const auto &connection : targets)
+        connection->send(payload);
+}
+
+void Hub::broadcast(const std::string &event, const Json::Value &data) const
+{
+    std::vector<drogon::WebSocketConnectionPtr> targets;
+    {
+        std::lock_guard lock(mutex_);
+        for (const auto &[userId, set] : connections_)
+            targets.insert(targets.end(), set.begin(), set.end());
+    }
+    if (targets.empty())
+        return;
 
     Json::Value envelope;
     envelope["event"] = event;

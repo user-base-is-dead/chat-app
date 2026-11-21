@@ -1,20 +1,24 @@
 .row {
     display: flex;
     gap: 12px;
-    margin-top: 2px;
-    padding: 6px 12px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    align-items: flex-start;
+    margin-top: 0;
+    padding: 2px 16px;
+    border-radius: 0;
+}
+
+@media (hover: hover) {
+    .row:hover {
+        background: color-mix(in srgb, var(--text) 4%, transparent);
+    }
 }
 
 .start {
-    margin-top: 10px;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    margin-top: 17px;
 }
 
 .focused {
-    background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .side {
@@ -30,15 +34,16 @@
     gap: 2px;
     padding-top: 3px;
     font-size: 10.5px;
-    color: var(--text-muted);
+    color: var(--bubble-other-muted);
     white-space: nowrap;
 }
 
 .body {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    padding: 0;
 }
 
 .head {
@@ -46,13 +51,15 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
+    margin-bottom: 2px;
+    line-height: 22px;
 }
 
 .name {
     overflow: hidden;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--bubble-other-text);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -60,13 +67,14 @@
 .time {
     flex-shrink: 0;
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--bubble-other-muted);
 }
 
 .text {
-    font-size: 15px;
-    line-height: 1.4;
-    color: var(--text);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.375;
+    color: var(--bubble-other-text);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
@@ -74,7 +82,7 @@
 .tick {
     display: inline-flex;
     flex-shrink: 0;
-    color: var(--text-muted);
+    color: var(--bubble-other-muted);
 }
 
 .tick svg {
@@ -93,11 +101,55 @@
 }
 
 @media (hover: hover) {
-    .row:hover {
-        background: color-mix(in srgb, var(--panel) 85%, transparent);
-    }
-
     .row:hover .sideTime {
         display: inline-flex;
     }
 }
+
+.check {
+    position: absolute;
+    left: 26px;
+    top: 4px;
+    width: 20px;
+    height: 20px;
+    border: 1.6px solid var(--text-muted);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s, background 0.16s, border-color 0.16s;
+}
+
+.row {
+    position: relative;
+}
+
+.start .check {
+    top: 12px;
+}
+
+.selecting {
+    cursor: pointer;
+}
+
+.selecting .check {
+    opacity: 1;
+}
+
+.side {
+    transition: opacity 0.16s;
+}
+
+.selecting .side {
+    opacity: 0;
+}
+
+.selected {
+    background: color-mix(in srgb, var(--chroma) 16%, transparent);
+}
+
+.selected .check {
+    border-color: var(--chroma);
+    background: var(--chroma) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat;
+}
+
+

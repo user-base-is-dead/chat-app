@@ -1,7 +1,7 @@
 import styles from './Roles.module.css'
 import Input from '../Input/Input'
 import DeleteIcon from '../Icons/DeleteIcon'
-import { PERMISSIONS, ROLE_COLORS, ROLE_NAME_LIMIT, roleColor } from '../../utils/roles'
+import { PERMISSIONS, PERMISSION_GROUPS, ROLE_COLORS, ROLE_NAME_LIMIT, isCustomColor, roleColor } from '../../utils/roles'
 
 function RoleEditor({ value, onChange, readOnly, canMoveUp, canMoveDown, onMove, onDelete }) {
     const set = (changes) => onChange({ ...value, ...changes })
@@ -9,6 +9,8 @@ function RoleEditor({ value, onChange, readOnly, canMoveUp, canMoveDown, onMove,
         const next = on ? [...value.permissions, key] : value.permissions.filter((item) => item !== key)
         set({ permissions: PERMISSIONS.map((item) => item.key).filter((item) => next.includes(item)) })
     }
+
+    const isAdmin = value.permissions.includes('administrator')
 
     return (
         <div className={styles.editor}>
@@ -18,6 +20,7 @@ function RoleEditor({ value, onChange, readOnly, canMoveUp, canMoveDown, onMove,
 
                 <div className={styles.block}>
                     <span className={styles.blockTitle}>Colour</span>
+                    <span className={styles.hint}>Members with this role show their name in this colour. Pick one or choose your own with the last circle.</span>
                     <div className={styles.swatches}>
                         <button
                             className={value.color ? styles.swatchNone : `${styles.swatchNone} ${styles.swatchOn}`}
@@ -37,6 +40,19 @@ function RoleEditor({ value, onChange, readOnly, canMoveUp, canMoveDown, onMove,
                                 onClick={() => set({ color })}
                             />
                         ))}
+                        <label
+                            className={isCustomColor(value.color) ? `${styles.swatchCustom} ${styles.swatchOn}` : styles.swatchCustom}
+                            style={isCustomColor(value.color) ? { background: value.color } : undefined}
+                            aria-label="Custom colour"
+                        >
+                            <span className={styles.swatchPlus}>+</span>
+                            <input
+                                className={styles.colorInput}
+                                type="color"
+                                value={isCustomColor(value.color) ? value.color : '#d97757'}
+                                onChange={(e) => set({ color: e.target.value.toLowerCase() })}
+                            />
+                        </label>
                     </div>
                 </div>
 
@@ -48,23 +64,29 @@ function RoleEditor({ value, onChange, readOnly, canMoveUp, canMoveDown, onMove,
                     <input className={styles.switch} type="checkbox" checked={value.separate} onChange={(e) => set({ separate: e.target.checked })} />
                 </label>
 
-                <div className={styles.block}>
-                    <span className={styles.blockTitle}>Permissions</span>
-                    {PERMISSIONS.map((permission) => (
-                        <label key={permission.key} className={styles.switchRow}>
-                            <span className={styles.switchText}>
-                                {permission.label}
-                                <span className={styles.hint}>{permission.hint}</span>
-                            </span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={value.permissions.includes(permission.key)}
-                                onChange={(e) => togglePermission(permission.key, e.target.checked)}
-                            />
-                        </label>
-                    ))}
-                </div>
+                {PERMISSION_GROUPS.map((group) => (
+                    <div key={group.id} className={group.id === 'advanced' ? `${styles.block} ${styles.advanced}` : styles.block}>
+                        <span className={styles.blockTitle}>{group.title}</span>
+                        {PERMISSIONS.filter((permission) => permission.group === group.id).map((permission) => {
+                            const implied = isAdmin && permission.key !== 'administrator'
+                            return (
+                                <label key={permission.key} className={styles.switchRow}>
+                                    <span className={styles.switchText}>
+                                        {permission.label}
+                                        <span className={styles.hint}>{implied ? 'Included with Administrator.' : permission.hint}</span>
+                                    </span>
+                                    <input
+                                        className={styles.switch}
+                                        type="checkbox"
+                                        checked={implied || value.permissions.includes(permission.key)}
+                                        disabled={implied}
+                                        onChange={(e) => togglePermission(permission.key, e.target.checked)}
+                                    />
+                                </label>
+                            )
+                        })}
+                    </div>
+                ))}
             </fieldset>
 
             {onMove && !readOnly && (

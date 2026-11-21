@@ -1,6 +1,8 @@
 import { accessToken, refreshSession } from './client'
+import { APP_PLATFORM, APP_VERSION, markUpdateRequired } from '../utils/appUpdate'
 
 const UNAUTHORIZED = 4001
+const UPDATE_REQUIRED = 4426
 const MAX_DELAY = 15000
 
 export function connectRealtime({ onEvent, onReady }) {
@@ -22,7 +24,7 @@ export function connectRealtime({ onEvent, onReady }) {
         socket = new WebSocket(`${protocol}://${window.location.host}/v1/ws`)
 
         socket.onopen = () => {
-            socket.send(JSON.stringify({ event: 'auth', data: { token: accessToken() } }))
+            socket.send(JSON.stringify({ event: 'auth', data: { token: accessToken(), platform: APP_PLATFORM, version: APP_VERSION } }))
         }
 
         socket.onmessage = (e) => {
@@ -43,6 +45,11 @@ export function connectRealtime({ onEvent, onReady }) {
         socket.onclose = async (e) => {
             socket = null
             if (closed) return
+            if (e.code === UPDATE_REQUIRED) {
+                closed = true
+                markUpdateRequired()
+                return
+            }
             if (e.code === UNAUTHORIZED) {
                 try {
                     await refreshSession()

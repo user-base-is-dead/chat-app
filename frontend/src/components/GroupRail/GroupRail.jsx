@@ -42,8 +42,10 @@ function GroupRail({ groups, selectedId, pinnedCount, onSelect, onNew, onPin, on
             onClick={() => onSelect(room)}
             onContextMenu={invite ? undefined : (e) => openMenu(e, room)}
         >
-            <span className={styles.photo}><Avatar name={room.name} photo={room.photo} size={44} /></span>
+            <span className={styles.marker} />
+            <span className={styles.photo}><Avatar name={room.name} photo={room.photo} size={48} /></span>
             {invite && <span className={styles.inviteDot} />}
+            {!invite && room.unreadCount > 0 && <span className={styles.unreadMark} />}
             {!invite && room.unreadCount > 0 && (
                 room.muted ? <span className={styles.mutedDot} /> : <span className={styles.badge}>{formatCount(room.unreadCount)}</span>
             )}
@@ -55,6 +57,7 @@ function GroupRail({ groups, selectedId, pinnedCount, onSelect, onNew, onPin, on
             {invites.map((room) => item(room, true))}
             {invites.length > 0 && joined.length > 0 && <span className={styles.divider} />}
             {joined.map((room) => item(room, false))}
+            <span className={styles.divider} />
             <button className={styles.add} type="button" aria-label="New Group" title="New Group" onClick={onNew}>
                 <PlusIcon />
             </button>

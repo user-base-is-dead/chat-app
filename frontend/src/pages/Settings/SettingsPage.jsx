@@ -7,6 +7,8 @@ import HashIcon from '../../components/Icons/HashIcon'
 import InfoIcon from '../../components/Icons/InfoIcon'
 import EditIcon from '../../components/Icons/EditIcon'
 import LockIcon from '../../components/Icons/LockIcon'
+import EyeIcon from '../../components/Icons/EyeIcon'
+import BackIcon from '../../components/Icons/BackIcon'
 import DisabledUserIcon from '../../components/Icons/DisabledUserIcon'
 import LogoutIcon from '../../components/Icons/LogoutIcon'
 import { getThemeChoice, setThemeChoice } from '../../utils/theme'
@@ -72,11 +74,67 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
     }
 
     if (view === 'password') {
-        return <PasswordSettings onBack={() => setView('main')} />
+        return <PasswordSettings onBack={() => setView('security')} />
     }
 
     if (view === 'account') {
-        return <AccountSettings onBack={() => setView('main')} onDone={onAccountGone} />
+        return <AccountSettings onBack={() => setView('security')} onDone={onAccountGone} />
+    }
+
+    const subPage = (title, content) => (
+        <div className={styles.page}>
+            <div className={styles.subHeader}>
+                <button className={styles.back} type="button" aria-label="Back" onClick={() => setView('main')}>
+                    <BackIcon />
+                </button>
+                <span className={styles.subTitle}>{title}</span>
+            </div>
+            {content}
+        </div>
+    )
+
+    if (view === 'privacy') {
+        return subPage('Privacy', (
+            <div className={styles.group}>
+                <span className={styles.groupTitle}>Last seen and online</span>
+                <label className={styles.switchRow}>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Show my last seen and online</span>
+                        <span className={styles.rowHint}>When on, people can see when you are online and when you were last active</span>
+                    </span>
+                    <input
+                        className={styles.switch}
+                        type="checkbox"
+                        checked={showLastSeen ?? true}
+                        disabled={showLastSeen === null}
+                        onChange={(e) => changeLastSeen(e.target.checked)}
+                    />
+                </label>
+            </div>
+        ))
+    }
+
+    if (view === 'security') {
+        return subPage('Security', (
+            <div className={styles.group}>
+                <button className={styles.row} type="button" onClick={() => setView('password')}>
+                    <span className={`${styles.icon} ${styles.iconGrey}`}><LockIcon /></span>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Change Password</span>
+                        <span className={styles.rowHint}>Set a new password for signing in</span>
+                    </span>
+                    <span className={styles.chevron}><ChevronIcon /></span>
+                </button>
+                <button className={styles.row} type="button" onClick={() => setView('account')}>
+                    <span className={`${styles.icon} ${styles.iconOrange}`}><DisabledUserIcon /></span>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Disable or Delete Account</span>
+                        <span className={styles.rowHint}>Pause your account for a while or remove it</span>
+                    </span>
+                    <span className={styles.chevron}><ChevronIcon /></span>
+                </button>
+            </div>
+        ))
     }
 
     return (
@@ -97,7 +155,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                     <span className={`${styles.icon} ${styles.iconBlue}`}><AtIcon /></span>
                     <span className={styles.rowText}>
                         <span className={styles.rowLabel}>{copied === 'username' ? 'Copied' : `@${user.username}`}</span>
-                        <span className={styles.rowHint}>Username</span>
+                        <span className={styles.rowHint}>Your username. Click to copy</span>
                     </span>
                 </button>
                 {user.bio && (
@@ -105,7 +163,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                         <span className={`${styles.icon} ${styles.iconOrange}`}><InfoIcon /></span>
                         <span className={styles.rowText}>
                             <span className={`${styles.rowLabel} ${styles.rowWrap}`}>{copied === 'bio' ? 'Copied' : user.bio}</span>
-                            <span className={styles.rowHint}>Bio</span>
+                            <span className={styles.rowHint}>Your bio. Click to copy</span>
                         </span>
                     </button>
                 )}
@@ -113,13 +171,14 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                     <span className={`${styles.icon} ${styles.iconPurple}`}><HashIcon /></span>
                     <span className={styles.rowText}>
                         <span className={styles.rowLabel}>{copied === 'id' ? 'Copied' : user.id}</span>
-                        <span className={styles.rowHint}>ID</span>
+                        <span className={styles.rowHint}>Your account ID. Click to copy</span>
                     </span>
                 </button>
             </div>
 
             <div className={styles.group}>
                 <span className={styles.groupTitle}>Appearance</span>
+                <span className={styles.groupHint}>Pick light or dark, or follow your device</span>
                 <div className={styles.themes} style={{ '--slot': themes.findIndex((item) => item.id === theme) }}>
                     <span className={styles.themeSlider} />
                     {themes.map((item) => (
@@ -136,27 +195,18 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
             </div>
 
             <div className={styles.group}>
-                <span className={styles.groupTitle}>Privacy</span>
-                <label className={styles.switchRow}>
-                    Show my last seen and online
-                    <input
-                        className={styles.switch}
-                        type="checkbox"
-                        checked={showLastSeen ?? true}
-                        disabled={showLastSeen === null}
-                        onChange={(e) => changeLastSeen(e.target.checked)}
-                    />
-                </label>
-            </div>
-            <div className={styles.group}>
-                <button className={styles.row} type="button" onClick={() => setView('password')}>
-                    <span className={`${styles.icon} ${styles.iconGrey}`}><LockIcon /></span>
-                    <span className={styles.rowLabel}>Change Password</span>
+                <button className={styles.row} type="button" onClick={() => setView('privacy')}>
+                    <span className={`${styles.icon} ${styles.iconBlue}`}><EyeIcon /></span>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Privacy</span>
+                    </span>
                     <span className={styles.chevron}><ChevronIcon /></span>
                 </button>
-                <button className={styles.row} type="button" onClick={() => setView('account')}>
-                    <span className={`${styles.icon} ${styles.iconOrange}`}><DisabledUserIcon /></span>
-                    <span className={styles.rowLabel}>Disable or Delete Account</span>
+                <button className={styles.row} type="button" onClick={() => setView('security')}>
+                    <span className={`${styles.icon} ${styles.iconGrey}`}><LockIcon /></span>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Security</span>
+                    </span>
                     <span className={styles.chevron}><ChevronIcon /></span>
                 </button>
             </div>
@@ -164,7 +214,10 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
             <div className={styles.group}>
                 <button className={`${styles.row} ${styles.logout}`} type="button" onClick={onLogout}>
                     <span className={`${styles.icon} ${styles.iconRed}`}><LogoutIcon /></span>
-                    <span className={styles.rowLabel}>Log Out</span>
+                    <span className={styles.rowText}>
+                        <span className={styles.rowLabel}>Log Out</span>
+                        <span className={styles.rowHint}>Sign out of Miron Chat on this device</span>
+                    </span>
                 </button>
             </div>
         </div>

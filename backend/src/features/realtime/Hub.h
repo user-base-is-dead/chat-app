@@ -18,6 +18,7 @@ class Hub
     bool remove(int64_t userId, const drogon::WebSocketConnectionPtr &connection, bool visible);
     bool isOnline(int64_t userId) const;
     void send(int64_t userId, const std::string &event, const Json::Value &data) const;
+    void broadcast(const std::string &event, const Json::Value &data) const;
     void disconnect(int64_t userId) const;
 
   private:

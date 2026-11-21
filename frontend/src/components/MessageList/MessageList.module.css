@@ -129,25 +129,124 @@
 }
 
 .dayLine {
+    position: sticky;
+    top: 4px;
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 14px 0 4px;
+    margin: 24px 16px 8px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text);
+    pointer-events: none;
 }
 
 .dayLine::before,
 .dayLine::after {
-    content: '';
+    content: "";
     flex: 1;
     height: 1px;
-    background: var(--border-strong);
+    background: var(--border);
+    transition: opacity 0.15s;
+}
+
+.dayLine[data-stuck]::before,
+.dayLine[data-stuck]::after {
+    opacity: 0;
 }
 
 .dayLine span {
-    padding: 2px 10px;
+    padding: 4px 14px;
+    border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--panel);
+    box-shadow: var(--shadow-small);
+}
+
+.selecting {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.selectBar {
+    position: absolute;
+    top: -59px;
+    left: 8px;
+    right: 8px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    animation: barIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+.selectClose {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.selectCount {
+    flex: 1;
+    padding-left: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    animation: countIn 0.18s ease-out;
+}
+
+.selectAction {
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.selectDanger {
+    color: var(--danger);
+}
+
+@keyframes barIn {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.97);
+    }
+}
+
+@keyframes countIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@media (hover: hover) {
+    .selectClose:hover,
+    .selectAction:hover {
+        background: var(--surface);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .selectBar,
+    .selectCount {
+        animation: none;
+    }
 }
