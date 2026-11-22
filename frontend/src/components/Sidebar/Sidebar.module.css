@@ -151,8 +151,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--surface-strong);
+    color: var(--text);
 }
 
 .requestsText {
@@ -628,7 +628,7 @@
     }
 }
 
-.centerTitle { composes: title; color: var(--chroma); position: absolute; left: 50%; transform: translateX(-50%); padding: 0; max-width: calc(100% - 100px); animation: none; }
+.centerTitle { composes: title; color: var(--text); position: absolute; left: 50%; transform: translateX(-50%); padding: 0; max-width: calc(100% - 100px); animation: none; }
 .titleRow:has(.centerTitle) { justify-content: flex-end; }
 .mobileMore { display: none; }
 .syncError { display: grid; justify-items: center; gap: 8px; padding: 20px; text-align: center; }

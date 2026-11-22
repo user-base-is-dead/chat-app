@@ -54,17 +54,17 @@ private class Palette(
 )
 
 private val lightPalette = Palette(
-    base = Color(0xFFF5F4EE),
-    sheet = Color(0xFFFFFEFB),
+    base = Color(0xFFF7F7F7),
+    sheet = Color(0xFFFFFFFF),
     sheetTint = 0f,
-    raised = Color(0xFFEFEDE4),
+    raised = Color(0xFFEEEEEE),
     canvasTint = 0f,
     surfaceTint = 0f,
     strongTint = 0f,
     dockTint = 0f,
     bubbleTint = 0f,
-    ink = Color(0xFF1F1E1D),
-    inkMuted = Color(0xFF73716B),
+    ink = Color(0xFF202020),
+    inkMuted = Color(0xFF686868),
     mutedIcon = Color(0xFFB0ADA4),
     mutedBadge = Color(0xFFCFCBC0),
     border = Color(0x223D3929),
@@ -75,16 +75,16 @@ private val lightPalette = Palette(
 )
 
 private val darkPalette = Palette(
-    base = Color(0xFF262624),
-    sheet = Color(0xFF30302E),
+    base = Color(0xFF222222),
+    sheet = Color(0xFF2B2B2B),
     sheetTint = 0f,
-    raised = Color(0xFF3A3936),
+    raised = Color(0xFF363636),
     canvasTint = 0f,
     surfaceTint = 0f,
     strongTint = 0f,
     dockTint = 0f,
     bubbleTint = 0f,
-    ink = Color(0xFFF5F4EE),
+    ink = Color(0xFFF7F7F7),
     inkMuted = Color(0xFFA6A39B),
     mutedIcon = Color(0xFF6E6C66),
     mutedBadge = Color(0xFF4A4945),
@@ -141,35 +141,31 @@ val Canvas: Color get() = lerp(palette.base, Chroma, palette.canvasTint)
 val Panel: Color get() = lerp(palette.sheet, Chroma, palette.sheetTint)
 val Card: Color get() = Panel
 val Surface: Color get() = lerp(palette.raised, Chroma, palette.surfaceTint)
-val SurfaceStrong: Color get() = if (Appearance.dark) Color(0xFF45443F) else Color(0xFFE8E5DA)
+val SurfaceStrong: Color get() = if (Appearance.dark) Color(0xFF45443F) else Color(0xFFE4E4E4)
 val Ink: Color get() = palette.ink
 val InkMuted: Color get() = palette.inkMuted
 val MutedIcon: Color get() = palette.mutedIcon
 val MutedBadge: Color get() = palette.mutedBadge
 val BorderStrong: Color get() = palette.borderStrong
 val BubbleBorder: Color get() = palette.border
-val BubbleOther: Color get() = if (Appearance.dark) Color(0xFF3A3936) else Color(0xFFFFFEFB)
+val BubbleOther: Color get() = if (Appearance.dark) Color(0xFF363636) else Color(0xFFFFFFFF)
 val BubbleMuted: Color get() = palette.bubbleMuted
 val AvatarBlank: Color get() = if (Appearance.dark) Color(0xFF4A3A33) else Color(0xFFF3E3DA)
 val AvatarBlankIcon: Color get() = if (Appearance.dark) Color(0xFFD98E72) else Color(0xFFDDA28C)
 private val soft: Boolean get() = Appearance.color.id == "default"
-val BubbleMine: Color get() = when {
-    !soft -> Chroma
-    Appearance.dark -> lerp(Color(0xFF30302E), Chroma, 0.72f)
-    else -> lerp(Color.White, Chroma, 0.16f)
-}
-val BubbleMineText: Color get() = if (soft && !Appearance.dark) palette.ink else Color.White
-val BubbleMineMuted: Color get() = if (soft && !Appearance.dark) lerp(Chroma, Color.Black, 0.18f) else Color.White.copy(alpha = 0.76f)
+val BubbleMine: Color get() = SurfaceStrong
+val BubbleMineText: Color get() = Ink
+val BubbleMineMuted: Color get() = InkMuted
 val BubbleMineFailed: Color get() = if (soft && !Appearance.dark) palette.danger else Color(0xFFFFD3D6)
 val Danger: Color get() = palette.danger
-val Dock: Color get() = if (Appearance.dark) Color(0xFF30302E) else Color(0xFFFFFEFB)
-val DockAccent: Color get() = lerp(Chroma, Color.White, palette.accentLift)
-val DockPill: Color get() = Chroma.copy(alpha = if (Appearance.dark) 0.24f else 0.14f)
+val Dock: Color get() = if (Appearance.dark) Color(0xFF2B2B2B) else Color(0xFFFFFFFF)
+val DockAccent: Color get() = Ink
+val DockPill: Color get() = SurfaceStrong
 val Fab: Color get() = Chroma
 val OnFab: Color get() = Color.White
-val Stage: Color get() = if (Appearance.dark) Color(0xFF262624) else Color(0xFFF5F4EE)
-val DoodleInk: Color get() = if (Appearance.dark) Color(0xFF2F2E2B) else Color(0xFFEAE7DD)
-val Cover: Color get() = Chroma
+val Stage: Color get() = if (Appearance.dark) Color(0xFF222222) else Color(0xFFF7F7F7)
+val DoodleInk: Color get() = if (Appearance.dark) Color(0xFF2F2E2B) else Color(0xFFEAEAEA)
+val Cover: Color get() = Color(0xFF454545)
 val CanvasTop: Color get() = if (Appearance.dark) Color(0xFF2B2A27) else Color(0xFFEFEBE1)
 val Online: Color get() = if (Appearance.dark) Color(0xFF3DD68C) else Color(0xFF22C55E)
 val SoftShadow: Color get() = if (Appearance.dark) Color(0x66000000) else Color(0x263D3929)

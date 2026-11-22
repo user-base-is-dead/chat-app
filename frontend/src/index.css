@@ -28,20 +28,20 @@
     --doodle-solid: url('./assets/doodle-solid.svg');
     --font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Color Emoji', sans-serif;
     --font-display: var(--font-ui);
-    --canvas: #F5F4EE;
+    --canvas: #F7F7F7;
     --bg: var(--canvas);
     --bg-gradient: var(--bg);
-    --panel-base: #FFFEFB;
-    --surface-base: #EFEDE4;
+    --panel-base: #FFFFFF;
+    --surface-base: #EEEEEE;
     --panel: var(--panel-base);
     --surface: var(--surface-base);
-    --surface-strong: #E8E5DA;
-    --stage: #F5F4EE;
+    --surface-strong: #E4E4E4;
+    --stage: #F7F7F7;
     --stage-tint: 0%;
-    --doodle-ink: #EAE7DD;
+    --doodle-ink: #EAEAEA;
     --bubble-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
-    --glass: rgba(255, 254, 251, 0.94);
-    --dock: rgba(255, 254, 251, 0.94);
+    --glass: rgba(255, 255, 255, 0.94);
+    --dock: rgba(255, 255, 255, 0.94);
     --rail: #131313;
     --rail-border: transparent;
     --on-rail: #FFFFFF;
@@ -49,9 +49,9 @@
     --on-fab: #FFFFFF;
     --border: rgba(61, 57, 41, 0.13);
     --border-strong: rgba(61, 57, 41, 0.24);
-    --text: #1F1E1D;
-    --text-muted: #73716B;
-    --icon: #73716B;
+    --text: #202020;
+    --text-muted: #686868;
+    --icon: #686868;
     --muted-icon: #B0ADA4;
     --muted-badge: #CFCBC0;
     --accent: var(--chroma);
@@ -62,8 +62,8 @@
     --on-accent: #FFFFFF;
     --avatar-blank: #F3E3DA;
     --avatar-blank-icon: #DDA28C;
-    --bubble-other: #FFFEFB;
-    --bubble-other-text: #1F1E1D;
+    --bubble-other: #FFFFFF;
+    --bubble-other-text: #202020;
     --bubble-other-muted: #8C897F;
     --bubble-ring: rgba(61, 57, 41, 0.14);
     --bubble-mine-mix: 100%;
@@ -115,22 +115,22 @@
 :root[data-theme="dark"] {
     color-scheme: dark;
     --doodle: url('./assets/doodle-pattern.svg');
-    --canvas: #262624;
-    --panel-base: #30302E;
-    --surface-base: #3A3936;
+    --canvas: #222222;
+    --panel-base: #2B2B2B;
+    --surface-base: #363636;
     --surface-strong: #45443F;
-    --stage: #262624;
+    --stage: #222222;
     --stage-tint: 0%;
     --doodle-ink: #2F2E2B;
     --bubble-shadow: none;
     --glass: rgba(48, 48, 46, 0.94);
     --dock: rgba(48, 48, 46, 0.94);
-    --rail: #1F1E1D;
+    --rail: #202020;
     --rail-border: rgba(255, 255, 255, 0.07);
     --on-rail: #F3F1EC;
     --border: rgba(255, 255, 255, 0.12);
     --border-strong: rgba(255, 255, 255, 0.22);
-    --text: #F5F4EE;
+    --text: #F7F7F7;
     --text-muted: #A6A39B;
     --icon: #A6A39B;
     --muted-icon: #6E6C66;
@@ -141,9 +141,9 @@
     --focus-ring: color-mix(in srgb, var(--chroma) 55%, transparent);
     --avatar-blank: #4A3A33;
     --avatar-blank-icon: #D98E72;
-    --bubble-other: #3A3936;
+    --bubble-other: #363636;
     --bubble-ring: rgba(255, 255, 255, 0.12);
-    --bubble-other-text: #F5F4EE;
+    --bubble-other-text: #F7F7F7;
     --bubble-other-muted: #A6A39B;
     --doodle-strength: 1;
     --danger: #F2555A;
@@ -169,18 +169,19 @@
 }
 
 :root[data-color="default"] {
-    --bubble-mine-mix: 38%;
+    --bubble-mine-mix: 0%;
+    --bubble-mine-base: #E5E5E5;
     --bubble-mine-shadow: var(--bubble-shadow);
     --bubble-mine-ring: var(--bubble-ring);
     --bubble-mine-selection: color-mix(in srgb, var(--chroma) 35%, transparent);
     --bubble-mine-text: #111114;
-    --bubble-mine-muted: color-mix(in srgb, var(--chroma) 74%, #000000);
+    --bubble-mine-muted: var(--text-muted);
     --bubble-mine-failed: var(--danger);
 }
 
 :root[data-color="default"][data-theme="dark"] {
-    --bubble-mine-mix: 72%;
-    --bubble-mine-base: #1C1C1E;
+    --bubble-mine-mix: 0%;
+    --bubble-mine-base: #404040;
     --bubble-mine-shadow: none;
     --bubble-mine-ring: transparent;
     --bubble-mine-selection: rgba(255, 255, 255, 0.35);

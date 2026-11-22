@@ -84,7 +84,7 @@ fun MenuScreen() {
                 val circle = Path().apply { addOval(Rect(origin, far * progress.value)) }
                 clipPath(circle) { this@drawWithContent.drawContent() }
             }
-            .background(Chroma),
+            .background(Color(0xFF252525)),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

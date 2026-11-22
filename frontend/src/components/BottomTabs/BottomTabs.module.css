@@ -43,7 +43,7 @@
     margin: 0;
     padding: 32px;
     border: 0;
-    background: var(--chroma);
+    background: #252525;
     color: white;
     text-align: center;
 }
@@ -113,8 +113,8 @@
 }
 
 .tabActive, .tabActive:hover {
-    color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--text);
+    background: var(--surface-strong);
 }
 
 .label {
@@ -173,7 +173,7 @@
         left: calc(8px + var(--slot) * (100% - 12px) / 4);
         width: calc((100% - 12px) / 4 - 4px);
         border-radius: 999px;
-        background: var(--accent-soft);
+        background: var(--surface-strong);
         transition: left 0.38s cubic-bezier(0.3, 1.25, 0.5, 1);
     }
 
@@ -209,7 +209,7 @@
 
     .tabActive,
     .tabActive:hover {
-        color: var(--accent);
+        color: var(--text);
     }
 
     .settingsTab {
