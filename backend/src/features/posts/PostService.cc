@@ -173,7 +173,7 @@ drogon::Task<> PostService::removeComment(int64_t chatId, int64_t messageId, int
 drogon::Task<PostStats> PostService::setSwitches(int64_t chatId, int64_t messageId, int64_t userId, Json::Value body)
 {
     const auto room = co_await requireChannel(chatId, userId);
-    if (!isAdminRole(room.role))
+    if (room.role != "owner")
         throw notAllowed();
     const auto post = co_await requirePost(chatId, messageId, userId);
     const bool reactions = body["allowReactions"].isBool() ? body["allowReactions"].asBool() : post.allowReactions;

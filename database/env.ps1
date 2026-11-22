@@ -23,5 +23,5 @@ $LogFile = Join-Path $PSScriptRoot 'postgres.log'
 $MigrationsDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'backend/migrations'
 $DbHost = '127.0.0.1'
 $DbPort = 5433
-$DbUser = 'miron'
-$DbName = 'miron_chat'
+$DbUser = 'civenth'
+$DbName = 'civenth_chat'

@@ -216,7 +216,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                     <span className={`${styles.icon} ${styles.iconRed}`}><LogoutIcon /></span>
                     <span className={styles.rowText}>
                         <span className={styles.rowLabel}>Log Out</span>
-                        <span className={styles.rowHint}>Sign out of Miron Chat on this device</span>
+                        <span className={styles.rowHint}>Sign out of Civenth on this device</span>
                     </span>
                 </button>
             </div>

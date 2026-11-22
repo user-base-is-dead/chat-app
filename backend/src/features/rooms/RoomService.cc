@@ -466,6 +466,8 @@ drogon::Task<messages::Message> RoomService::edit(int64_t chatId,
                                                   std::string ciphertext)
 {
     requireViewer(room);
+    if (room.kind == "channel" && room.role != "owner")
+        throw ApiError(drogon::k403Forbidden, "not_allowed", "Only the owner can edit posts");
     auto message = co_await messages_.edit(chatId, messageId, userId, ciphertext);
     if (!message)
         throw ApiError(drogon::k404NotFound, "message_not_found", "Message not found");

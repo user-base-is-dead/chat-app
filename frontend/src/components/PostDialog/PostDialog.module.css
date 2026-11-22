@@ -1,0 +1,158 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(8, 8, 10, 0.4);
+}
+
+.dialog {
+    width: 100%;
+    max-width: 440px;
+    padding: 24px 20px 20px;
+    border-radius: var(--radius-sheet);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lift);
+}
+
+.title {
+    margin: 0 0 14px;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+}
+
+.text {
+    width: 100%;
+    min-height: 96px;
+    max-height: 40vh;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--surface-base);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.45;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.text:focus {
+    border-color: var(--accent);
+}
+
+.switches {
+    display: flex;
+    flex-direction: column;
+    margin: 12px 0 18px;
+}
+
+.switchRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 2px;
+    cursor: pointer;
+}
+
+.switchText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.switchLabel {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.switchHint {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.switch {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 26px;
+    margin: 0;
+    border-radius: 13px;
+    background: var(--surface-strong);
+    cursor: pointer;
+}
+
+.switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.switch:checked {
+    background: var(--accent);
+}
+
+.switch:checked::after {
+    transform: translateX(16px);
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.cancel,
+.confirm {
+    flex: 1;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cancel {
+    background: var(--surface-base);
+    color: var(--text);
+}
+
+.cancel:hover {
+    background: var(--surface-strong);
+}
+
+.confirm {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.confirm:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.cancel:disabled {
+    cursor: default;
+}

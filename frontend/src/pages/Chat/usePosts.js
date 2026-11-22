@@ -61,6 +61,14 @@ export function usePosts(roomId, messages, onError) {
         }
     }
 
+    const update = async (messageId, changes) => {
+        const current = stats[messageId]
+        if (!current) return
+        const changed = Object.fromEntries(Object.entries(changes).filter(([key, value]) => current[key] !== value))
+        if (Object.keys(changed).length === 0) return
+        store([await setPostSwitches(roomId, messageId, changed)])
+    }
+
     const onEvent = (event, data) => {
         if (event === 'post.reactions') {
             patch(data.messageId, () => ({ reactions: data.reactions }))
@@ -73,5 +81,5 @@ export function usePosts(roomId, messages, onError) {
         }
     }
 
-    return { stats, commentEvent, react, toggle, onEvent }
+    return { stats, commentEvent, react, toggle, update, onEvent }
 }

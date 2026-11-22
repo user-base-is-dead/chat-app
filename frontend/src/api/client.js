@@ -1,7 +1,7 @@
 import { APP_PLATFORM, APP_VERSION, markUpdateRequired } from '../utils/appUpdate'
 
-const ACCESS_KEY = 'miron.accessToken'
-const REFRESH_KEY = 'miron.refreshToken'
+const ACCESS_KEY = 'civenth.accessToken'
+const REFRESH_KEY = 'civenth.refreshToken'
 
 export class ApiError extends Error {
     constructor(status, code, message) {

@@ -2,9 +2,10 @@ import styles from './PostFooter.module.css'
 import EyeIcon from '../Icons/EyeIcon'
 import CommentIcon from '../Icons/CommentIcon'
 import ChevronIcon from '../Icons/ChevronIcon'
+import MoreIcon from '../Icons/MoreIcon'
 import { formatCount } from '../../utils/formatCount'
 
-function PostFooter({ stats, time, onReact, onOpenComments }) {
+function PostFooter({ stats, time, onReact, onOpenComments, onManage }) {
     const reactions = stats?.allowReactions ? stats.reactions : []
 
     return (
@@ -35,6 +36,16 @@ function PostFooter({ stats, time, onReact, onOpenComments }) {
                     <span>{time}</span>
                 </span>
             </div>
+            {stats && onManage && (
+                <div className={styles.settings}>
+                    <span className={stats.allowComments ? styles.settingOn : styles.settingOff}>Comments {stats.allowComments ? 'on' : 'off'}</span>
+                    <span className={styles.dot} aria-hidden="true" />
+                    <span className={stats.allowReactions ? styles.settingOn : styles.settingOff}>Reactions {stats.allowReactions ? 'on' : 'off'}</span>
+                    <button className={styles.more} type="button" aria-label="Post options" onClick={onManage}>
+                        <MoreIcon />
+                    </button>
+                </div>
+            )}
             {stats?.allowComments && onOpenComments && (
                 <button className={styles.comments} type="button" onClick={onOpenComments}>
                     <CommentIcon />

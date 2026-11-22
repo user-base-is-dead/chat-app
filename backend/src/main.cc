@@ -47,7 +47,7 @@ int main()
                 return;
             }
             stop(core::http::errorResponse(core::http::ApiError(
-                drogon::k426UpgradeRequired, "update_required", "Please update Miron Chat to keep using it")));
+                drogon::k426UpgradeRequired, "update_required", "Please update Civenth to keep using it")));
         });
     drogon::app().registerBeginningAdvice([] {
         core::app::onVersionChange([](const std::string &platform) {

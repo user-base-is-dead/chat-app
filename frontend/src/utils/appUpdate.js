@@ -69,15 +69,15 @@ export async function checkVersion() {
         const releases = (info.releases ?? []).map((release) => ({
             id: `release-${release.versionCode}`,
             kind: 'update',
-            title: `Miron Chat ${release.versionName}`,
-            body: release.notes || 'A new version of Miron Chat is ready.',
+            title: `Civenth ${release.versionName}`,
+            body: release.notes || 'A new version of Civenth is ready.',
             at: release.createdAt,
             versionCode: release.versionCode,
         }))
         const notices = storedNotices(info.flags?.notice ?? '').map((item) => ({
             id: `notice-${item.at}`,
             kind: 'notice',
-            title: 'Message from Miron Chat',
+            title: 'Message from Civenth',
             body: item.text,
             at: item.at,
             versionCode: 0,

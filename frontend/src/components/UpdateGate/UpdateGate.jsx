@@ -10,9 +10,9 @@ function UpdateGate({ children }) {
         return (
             <div className={styles.required}>
                 <div className={styles.card}>
-                    <img className={styles.logo} src="/apple-touch-icon.png" alt="Miron Chat" />
+                    <img className={styles.logo} src="/apple-touch-icon.png" alt="Civenth" />
                     <h1 className={styles.title}>Update required</h1>
-                    <p className={styles.text}>This version of Miron Chat is no longer supported. Reload to get the latest version.</p>
+                    <p className={styles.text}>This version of Civenth is no longer supported. Reload to get the latest version.</p>
                     {latest?.notes && <p className={styles.notes}>{latest.notes}</p>}
                     <button className={styles.primary} type="button" onClick={reload}>Reload now</button>
                 </div>

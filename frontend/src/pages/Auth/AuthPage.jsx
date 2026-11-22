@@ -93,8 +93,8 @@ function AuthPage({ onLogin }) {
 
                         {/* header */}
 
-                        <div key={mode} className={styles.logo}><img src={logo} alt="Miron Chat logo" /></div>
-                        <h1 className={styles.title}>Miron Chat</h1>
+                        <div key={mode} className={styles.logo}><img src={logo} alt="Civenth logo" /></div>
+                        <h1 className={styles.title}>Civenth</h1>
                         <p key={`sub-${mode}`} className={styles.subtitle}>{mode === 'login' ? 'Sign in to continue' : 'Create a new account'}</p>
 
                         {/* tabs */}

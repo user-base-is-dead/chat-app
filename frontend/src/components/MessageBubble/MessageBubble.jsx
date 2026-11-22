@@ -9,6 +9,7 @@ import Avatar from '../Avatar/Avatar'
 import PostFooter from '../PostFooter/PostFooter'
 import EmojiIcon from '../Icons/EmojiIcon'
 import CommentIcon from '../Icons/CommentIcon'
+import EditIcon from '../Icons/EditIcon'
 import { REACTIONS } from '../../utils/reactions'
 import { messageMenuItems } from './messageMenu'
 import { dateTime } from '../../utils/dayLabel'
@@ -29,7 +30,7 @@ function StatusIcon({ status }) {
     )
 }
 
-function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, channel, stats, canManagePosts, selecting, selected, onSelect, onReact, onOpenComments, onToggleSwitch, onResend, onDelete }) {
+function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, channel, stats, canManagePosts, selecting, selected, onSelect, onReact, onOpenComments, onToggleSwitch, onEditPost, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
     const tailClip = useId()
     const bubbleRef = useRef(null)
@@ -53,14 +54,20 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
 
     const senderName = channel ? channel.name : message.senderName || 'Deleted Account'
 
-    const switchItems = post && canManagePosts && stats ? [
-        { label: stats.allowReactions ? 'Turn off reactions' : 'Turn on reactions', Icon: EmojiIcon, onClick: () => onToggleSwitch('allowReactions') },
+    const manage = post && canManagePosts && stats
+    const manageItems = manage ? [
+        { label: 'Edit post', Icon: EditIcon, onClick: () => onEditPost() },
         { label: stats.allowComments ? 'Turn off comments' : 'Turn on comments', Icon: CommentIcon, onClick: () => onToggleSwitch('allowComments') },
+        { label: stats.allowReactions ? 'Turn off reactions' : 'Turn on reactions', Icon: EmojiIcon, onClick: () => onToggleSwitch('allowReactions') },
     ] : []
 
-    const baseItems = messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })
-    const deleteLabel = (item) => item.label === 'Delete'
-    const items = [...baseItems.filter((item) => !deleteLabel(item)), ...switchItems, ...baseItems.filter(deleteLabel)]
+    const items = menu?.manage ? manageItems : messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })
+
+    const openManage = (e) => {
+        if (selecting) return
+        const box = e.currentTarget.getBoundingClientRect()
+        setMenu({ x: box.right - 8, y: box.bottom + 4, manage: true })
+    }
 
     const reactionRow = post && stats?.allowReactions ? (close) => (
         <div className={styles.reactions}>
@@ -91,7 +98,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
             {showSender && groupEnd && <span className={styles.senderAvatar}><Avatar name={senderName} photo={channel?.photo} size={32} /></span>}
             <span className={styles.text}>{message.text}</span>
             {post ? (
-                <PostFooter stats={stats} time={message.createdAt ? dateTime(message.createdAt) : message.time} onReact={onReact} onOpenComments={onOpenComments} />
+                <PostFooter stats={stats} time={message.createdAt ? dateTime(message.createdAt) : message.time} onReact={onReact} onOpenComments={onOpenComments} onManage={manage ? openManage : undefined} />
             ) : (
                 <span className={styles.meta}>
                     <span className={styles.time}>{message.time}</span>
@@ -112,7 +119,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
                     x={menu.x}
                     y={menu.y}
                     title={message.status === 'failed' ? 'Message not sent' : null}
-                    header={reactionRow}
+                    header={menu.manage ? null : reactionRow}
                     items={items}
                     onClose={() => setMenu(null)}
                 />

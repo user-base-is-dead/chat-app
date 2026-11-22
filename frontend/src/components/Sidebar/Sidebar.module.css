@@ -26,8 +26,8 @@
 .header {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 14px 12px 10px 4px;
+    gap: 9px;
+    padding: 12px 12px 8px 4px;
     flex-shrink: 0;
 }
 
@@ -111,12 +111,12 @@
 
 .requestsRow {
     width: calc(100% - 16px);
-    margin: 2px 12px 8px 4px;
+    margin: 0 12px 5px 4px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px 10px 10px;
+    gap: 10px;
+    padding: 7px 10px 7px 8px;
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     background: var(--panel);
@@ -136,8 +136,8 @@
 }
 
 .requestsIcon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -156,12 +156,12 @@
 }
 
 .requestsLabel {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
 }
 
 .requestsHint {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -183,8 +183,8 @@
 
 .folders {
     display: flex;
-    gap: 8px;
-    margin: 0 12px 8px 4px;
+    gap: 6px;
+    margin: 0 12px 6px 4px;
     overflow-x: auto;
     scrollbar-width: none;
     flex-shrink: 0;
@@ -199,8 +199,8 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    height: 34px;
-    padding: 0 14px;
+    height: 30px;
+    padding: 0 12px;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--panel);
@@ -225,15 +225,15 @@
 }
 
 .folderCount {
-    min-width: 20px;
-    height: 20px;
+    min-width: 18px;
+    height: 18px;
     margin-right: -6px;
     padding: 0 6px;
     border-radius: 10px;
     background: var(--muted-badge);
     font-size: 11.5px;
     font-weight: 700;
-    line-height: 20px;
+    line-height: 18px;
     text-align: center;
     color: var(--text);
 }
@@ -358,17 +358,19 @@
     }
 
     .header {
-        padding: 14px 12px 10px;
+        padding: 10px 12px 6px;
+        gap: 8px;
     }
 
     .requestsRow {
         width: calc(100% - 24px);
-        margin: 2px 12px 8px;
+        margin: 0 12px 4px;
     }
 
     .folders,
     .requestsTabs {
         margin-left: 12px;
+        margin-bottom: 5px;
     }
 
     .list {

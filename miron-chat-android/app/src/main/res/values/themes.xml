@@ -1,5 +1,0 @@
-<resources>
-    <style name="Theme.MironChat" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/canvas</item>
-    </style>
-</resources>

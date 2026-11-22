@@ -16,7 +16,7 @@ const groupIcons = {
     flags: '🏳️',
 }
 
-const recentKey = 'miron-recent-emoji'
+const recentKey = 'civenth-recent-emoji'
 const recentLimit = 24
 const defaultRecent = ['😂', '❤️', '👍', '😭', '😊', '🙏', '😍', '🔥', '😁', '🥰', '😅', '👏', '🤔', '😢', '😎', '🎉']
 

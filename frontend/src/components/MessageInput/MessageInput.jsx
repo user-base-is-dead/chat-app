@@ -5,8 +5,14 @@ import AttachIcon from '../Icons/AttachIcon'
 import EmojiIcon from '../Icons/EmojiIcon'
 import EmojiPanel from '../EmojiPanel/EmojiPanel'
 
-function MessageInput({ onSend, onTyping, focusNow, onFocused }) {
+function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping, focusNow, onFocused }) {
     const [text, setText] = useState('')
+    const [clearedKey, setClearedKey] = useState(clearKey)
+
+    if (clearedKey !== clearKey) {
+        setClearedKey(clearKey)
+        setText('')
+    }
     const [emojiOpen, setEmojiOpen] = useState(false)
     const [emojiPinned, setEmojiPinned] = useState(false)
     const inputRef = useRef(null)
@@ -108,7 +114,7 @@ function MessageInput({ onSend, onTyping, focusNow, onFocused }) {
     const handleSubmit = (e) => {
         e.preventDefault()
         if (!text.trim()) return
-        onSend(text.trim())
+        if (onSend(text.trim()) === false) return
         setText('')
     }
 
@@ -128,7 +134,7 @@ function MessageInput({ onSend, onTyping, focusNow, onFocused }) {
                 <button className={styles.iconButton} type="button" aria-label="Attach">
                     <AttachIcon />
                 </button>
-                <input ref={inputRef} className={styles.input} type="text" placeholder="Message" value={text} onChange={(e) => {
+                <input ref={inputRef} className={styles.input} type="text" placeholder={placeholder} value={text} onChange={(e) => {
                     setText(e.target.value)
                     if (e.target.value.trim()) onTyping?.()
                 }} />

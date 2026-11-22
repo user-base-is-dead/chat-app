@@ -16,7 +16,7 @@ const tabs = [
 function BottomTabs({ user, activeTab, onChange }) {
     return (
         <nav className={styles.bar} style={{ '--slot': tabs.findIndex((tab) => tab.id === activeTab) }}>
-            <img className={styles.logo} src={logo} alt="Miron Chat" />
+            <img className={styles.logo} src={logo} alt="Civenth" />
             <span className={styles.slider} />
             {tabs.map(({ id, label, Icon }) => (
                 <button

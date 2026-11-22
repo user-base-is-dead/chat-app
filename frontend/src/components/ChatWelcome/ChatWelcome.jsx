@@ -15,7 +15,7 @@ function ChatWelcome({ name }) {
                     <LockIcon />
                 </span>
                 <div className={styles.infoText}>
-                    <h2 className={styles.title}>Miron Chat</h2>
+                    <h2 className={styles.title}>Civenth</h2>
                     <ul className={styles.points}>
                         <li>Every message is end-to-end encrypted. Only you and the person you're talking to can read it.</li>
                         <li>We never share your data with any government or third party.</li>

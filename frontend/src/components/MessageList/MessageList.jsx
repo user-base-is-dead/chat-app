@@ -13,7 +13,7 @@ const LOAD_OLDER_OFFSET = 120
 const JUMP_SHOW_OFFSET = 200
 const SEEN_EDGE = 16
 
-function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId, showSenders, hideTicks, canDeleteOthers = true, channel, postStats, canManagePosts, onReact, onOpenComments, onToggleSwitch, onDeleteMany, flat, selfName, peerName, peerPhoto, nameColors, ownerId }) {
+function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId, showSenders, hideTicks, canDeleteOthers = true, channel, postStats, canManagePosts, onReact, onOpenComments, onToggleSwitch, onEditPost, onDeleteMany, flat, selfName, peerName, peerPhoto, nameColors, ownerId }) {
     const sameSide = (a, b) => (channel ? true : showSenders ? a.senderId === b.senderId : a.mine === b.mine)
     const RUN_GAP = 5 * 60 * 1000
     const joins = (a, b) => Boolean(a && b) && (a.mine ? b.mine : !b.mine && a.senderId === b.senderId)
@@ -273,6 +273,7 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
                                 onReact={(emoji) => onReact(msg.id, emoji)}
                                 onOpenComments={() => onOpenComments(msg.id)}
                                 onToggleSwitch={(key) => onToggleSwitch(msg.id, key)}
+                                onEditPost={() => onEditPost(msg)}
                                 hideTicks={hideTicks}
                                 canDeleteOthers={canDeleteOthers}
                                 selecting={selecting}

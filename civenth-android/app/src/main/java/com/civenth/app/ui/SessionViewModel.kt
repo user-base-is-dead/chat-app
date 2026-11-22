@@ -1,0 +1,68 @@
+package com.civenth.app.ui
+
+import com.civenth.app.ui.chats.SearchHistory
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.civenth.app.CiventhApp
+import com.civenth.app.alerts.MessageAlerts
+import com.civenth.app.data.ApiError
+import com.civenth.app.data.User
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+sealed interface SessionState {
+    data object Loading : SessionState
+    data object LoggedOut : SessionState
+    data object Offline : SessionState
+    data class LoggedIn(val user: User) : SessionState
+}
+
+class SessionViewModel(application: Application) : AndroidViewModel(application) {
+    private val auth = (application as CiventhApp).auth
+    private val current = MutableStateFlow<SessionState>(SessionState.Loading)
+    val state: StateFlow<SessionState> = current
+
+    init {
+        restore()
+    }
+
+    fun restore() {
+        if (!auth.hasSession) {
+            MessageAlerts.stop(getApplication())
+            SearchHistory.clear(getApplication())
+            current.value = SessionState.LoggedOut
+            return
+        }
+        current.value = SessionState.Loading
+        viewModelScope.launch {
+            current.value = try {
+                SessionState.LoggedIn(auth.currentUser())
+            } catch (error: ApiError) {
+                if (auth.hasSession) SessionState.Offline else SessionState.LoggedOut
+            }
+        }
+    }
+
+    fun loggedIn(user: User) {
+        current.value = SessionState.LoggedIn(user)
+    }
+
+    fun accountGone() {
+        MessageAlerts.stop(getApplication())
+        SearchHistory.clear(getApplication())
+        auth.forget()
+        current.value = SessionState.LoggedOut
+    }
+
+    fun logout() {
+        MessageAlerts.stop(getApplication())
+        SearchHistory.clear(getApplication())
+        current.value = SessionState.Loading
+        viewModelScope.launch {
+            auth.logout()
+            current.value = SessionState.LoggedOut
+        }
+    }
+}

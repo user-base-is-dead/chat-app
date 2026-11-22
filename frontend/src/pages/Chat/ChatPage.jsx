@@ -21,6 +21,7 @@ import {
     acceptChat,
     deleteChat as removeChat,
     deleteMessage as removeMessage,
+    editMessage,
     listChats,
     loadMessages,
     loadNewerMessages,
@@ -52,7 +53,7 @@ import {
     unpinRoom,
 } from '../../api/rooms'
 import { joinKey, roomLabel } from '../../utils/roomLink'
-import { readSwitches, saveSwitches } from '../../utils/reactions'
+import { DEFAULT_SWITCHES } from '../../utils/reactions'
 import { usePosts } from './usePosts'
 import { listChannels } from '../../api/channels'
 import { readOpenChannel, saveOpenChannel } from '../../utils/channelName'
@@ -61,7 +62,7 @@ import MemberList from '../../components/MemberList/MemberList'
 import { useGroupMembers } from './useGroupMembers'
 import { can, colorOf } from '../../utils/roles'
 import PostComments from '../../components/PostComments/PostComments'
-import PostToggles from '../../components/PostToggles/PostToggles'
+import PostDialog from '../../components/PostDialog/PostDialog'
 
 const TYPING_SEND_GAP = 3000
 const TYPING_SHOW_FOR = 6000
@@ -220,7 +221,8 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [joining, setJoining] = useState(null)
     const [roomTick, setRoomTick] = useState(0)
     const [commentsFor, setCommentsFor] = useState(null)
-    const [postSwitches, setPostSwitches] = useState({})
+    const [postDialog, setPostDialog] = useState(null)
+    const [inputClear, setInputClear] = useState(0)
     const [channelsByRoom, setChannelsByRoom] = useState({})
     const [railGroupId, setRailGroupId] = useState(null)
     const realtimeRef = useRef(null)
@@ -324,7 +326,6 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     const selectedGroup = selectedChat?.roomId ? chats.find((chat) => chat.id === selectedChat.roomId) ?? selectedChat : selectedChat
     const selectedRoomId = selectedGroup?.kind ? selectedGroup.id : null
     const channelId = selectedChat?.kind === 'channel' && selectedChat.status === 'active' ? selectedChat.id : null
-    const switches = channelId ? postSwitches[channelId] ?? readSwitches(channelId) : null
 
     useEffect(() => {
         if (!selectedRoomId) return
@@ -982,7 +983,40 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         realtimeHandlers.current = handlers
     })
 
-    const handleSend = async (text) => {
+    const handleSend = (text) => {
+        if (selectedChat?.id === channelId) {
+            setPostDialog({ text, switches: DEFAULT_SWITCHES })
+            return false
+        }
+        postMessage(text)
+    }
+
+    const broadcast = (text, switches) => {
+        setInputClear((tick) => tick + 1)
+        postMessage(text, switches)
+    }
+
+    const editPost = (message) => {
+        const stats = posts.stats[message.id]
+        if (!stats) return
+        setPostDialog({
+            message,
+            text: message.text,
+            switches: { allowComments: stats.allowComments, allowReactions: stats.allowReactions },
+        })
+    }
+
+    const saveEdit = async (message, text, switches) => {
+        try {
+            if (text !== message.text) applyMessage(await editMessage(channelId, message.id, text), false)
+            await posts.update(message.id, switches)
+        } catch (error) {
+            showToast(error.message)
+            return false
+        }
+    }
+
+    const postMessage = async (text, switches) => {
         const chatId = selectedChat?.id
         if (pagesByChat[chatId]?.hasNewer) await jumpToLatest()
         lastTypingSent.current = 0
@@ -993,12 +1027,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
             ...prev,
             [chatId]: [...(prev[chatId] || []), { id: tempId, senderId: user.id, text, time: formatTime(now), createdAt: now, mine: true, status: 'sending' }],
         }))
-        deliver(chatId, tempId, text, chatId === channelId ? switches : undefined)
-    }
-
-    const changeSwitches = (next) => {
-        saveSwitches(channelId, next)
-        setPostSwitches((prev) => ({ ...prev, [channelId]: next }))
+        deliver(chatId, tempId, text, switches)
     }
 
     const openComments = (messageId) => {
@@ -1128,6 +1157,16 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             membersOpen={groupOpen && membersPanel}
                         />
                         {toast && <Toast key={toast.at} text={toast.text} />}
+                        {postDialog && (
+                            <PostDialog
+                                title={postDialog.message ? 'Edit post' : 'New broadcast'}
+                                text={postDialog.text}
+                                switches={postDialog.switches}
+                                actionLabel={postDialog.message ? 'Save' : 'Broadcast'}
+                                onSubmit={(text, switches) => (postDialog.message ? saveEdit(postDialog.message, text, switches) : broadcast(text, switches))}
+                                onClose={() => setPostDialog(null)}
+                            />
+                        )}
                         {commentsPost && !commentsOff ? (
                             <PostComments
                                 key={commentsPost.id}
@@ -1172,10 +1211,11 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             ownerId={selectedChat.role === 'owner' ? null : ownerId}
                             channel={channelId ? selectedChat : null}
                             postStats={posts.stats}
-                            canManagePosts={selectedChat.role === 'owner' || selectedChat.role === 'admin'}
+                            canManagePosts={selectedChat.role === 'owner'}
                             onReact={posts.react}
                             onOpenComments={openComments}
                             onToggleSwitch={posts.toggle}
+                            onEditPost={editPost}
                         />
                         {sendBlocked ? (
                             <AccountBar text="You cannot send messages in this channel" />
@@ -1195,8 +1235,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             <AccountBar text="This account is disabled" />
                         ) : (
                             <>
-                                {channelId && <PostToggles value={switches} onChange={changeSwitches} />}
-                                <MessageInput onSend={handleSend} onTyping={sendTyping} focusNow={inputFocus} onFocused={clearInputFocus} />
+                                <MessageInput placeholder={channelId ? 'Broadcast' : 'Message'} clearKey={inputClear} onSend={handleSend} onTyping={sendTyping} focusNow={inputFocus} onFocused={clearInputFocus} />
                             </>
                         )}
                         </>

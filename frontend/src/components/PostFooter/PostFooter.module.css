@@ -91,3 +91,53 @@
     flex: 1;
     min-width: 0;
 }
+
+.settings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.settingOn {
+    color: var(--accent);
+}
+
+.settingOff {
+    color: var(--bubble-other-muted);
+}
+
+.dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--bubble-other-muted);
+}
+
+.more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin: -8px -6px -8px auto;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--bubble-other-muted);
+    cursor: pointer;
+}
+
+.more:hover {
+    background: var(--surface-strong);
+    color: var(--text);
+}
+
+.more svg {
+    width: 20px;
+    height: 20px;
+}

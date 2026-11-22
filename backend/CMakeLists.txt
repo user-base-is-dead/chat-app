@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(miron_backend LANGUAGES CXX)
+project(civenth_backend LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,11 +32,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(drogon jwt-cpp)
 
+find_package(ZLIB REQUIRED)
 find_path(SODIUM_INCLUDE_DIR sodium.h REQUIRED)
 find_library(SODIUM_LIBRARY NAMES sodium libsodium REQUIRED)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cc)
 
-add_executable(miron_backend ${SOURCES})
-target_include_directories(miron_backend PRIVATE src ${SODIUM_INCLUDE_DIR})
-target_link_libraries(miron_backend PRIVATE drogon jwt-cpp::jwt-cpp ${SODIUM_LIBRARY})
+add_executable(civenth_backend ${SOURCES})
+target_include_directories(civenth_backend PRIVATE src ${SODIUM_INCLUDE_DIR})
+target_link_libraries(civenth_backend PRIVATE drogon jwt-cpp::jwt-cpp ZLIB::ZLIB ${SODIUM_LIBRARY})

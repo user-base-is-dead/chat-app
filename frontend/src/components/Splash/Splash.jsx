@@ -5,7 +5,7 @@ import Spinner from '../Spinner/Spinner'
 function Splash() {
     return (
         <div className={styles.splash}>
-            <img className={styles.logo} src={logo} alt="Miron Chat" />
+            <img className={styles.logo} src={logo} alt="Civenth" />
             <span className={styles.spinner}>
                 <Spinner size={24} />
             </span>

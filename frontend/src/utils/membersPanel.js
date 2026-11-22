@@ -1,4 +1,4 @@
-const KEY = 'miron.membersPanel'
+const KEY = 'civenth.membersPanel'
 
 export function readMembersPanel() {
     try {
