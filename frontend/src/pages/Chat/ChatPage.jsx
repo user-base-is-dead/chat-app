@@ -1284,7 +1284,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     }
 
     const chatHeader = selectedChat && innerSearch === selectedChat.id ? (
-        <ConversationSearch key={selectedChat.id} chatId={selectedChat.id} onClose={() => window.history.back()}
+        <ConversationSearch key={selectedChat.id} chatId={selectedChat.id} title={selectedChat.kind === "group" ? `#${channelLabel}` : selectedGroup.name} onClose={() => window.history.back()}
             onPick={(id) => { window.history.back(); jumpTo(selectedChat.id, id) }} />
     ) : selectedChat && (
         <ChatHeader

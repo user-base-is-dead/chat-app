@@ -189,7 +189,6 @@ fun ChatScreen(
     channelName: String? = null,
     selfName: String = "",
     onBack: () -> Unit,
-    onSearch: () -> Unit,
     onToggleMute: () -> Unit,
     onDeleteChat: () -> Unit,
     userId: String,
@@ -280,6 +279,7 @@ fun ChatScreen(
     var draft by remember(room) { mutableStateOf<InputDraft?>(null) }
     var forwarding by remember(room) { mutableStateOf<List<Message>?>(null) }
     var holdBottom by remember(room) { mutableStateOf(false) }
+    var chatSearchOpen by remember(room) { mutableStateOf(false) }
     val canDeleteMessage: (Message) -> Boolean = { message ->
         message.mine || !chat.isRoom ||
             ((channelPermissions?.contains("deleteMessages") ?: chat.can("deleteMessages")) &&
@@ -776,7 +776,7 @@ fun ChatScreen(
             onBack = onBack,
             onOpenInfo = { infoOpen = true },
             onCall = { Toast.makeText(context, "Calls coming soon", Toast.LENGTH_SHORT).show() },
-            onSearch = onSearch,
+            onSearch = { chatSearchOpen = true },
             onToggleMute = onToggleMute,
             onCopyId = { copyText(context, chat.peerId) },
             onDelete = onDeleteChat,
@@ -826,6 +826,19 @@ fun ChatScreen(
             userId = userId,
             presence = presence,
             onBack = { membersOpen = false },
+        )
+    }
+
+    if (chatSearchOpen) {
+        ChatSearchScreen(
+            room = room,
+            title = chat.name,
+            nameOf = nameOf,
+            onPick = { message ->
+                chatSearchOpen = false
+                room.jumpTo(message.id)
+            },
+            onBack = { chatSearchOpen = false },
         )
     }
 

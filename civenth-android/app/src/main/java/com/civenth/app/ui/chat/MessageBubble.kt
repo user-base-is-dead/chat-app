@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -165,16 +164,11 @@ fun MessageBubble(
                         drawContent()
                         if (groupEnd) drawTail(mine)
                     }
+                    .background(if (mine) BubbleMine else BubbleOther, shape)
                     .drawBehind {
                         if (ring == 0f) return@drawBehind
-                        val spread = 4.dp.toPx()
-                        val wide = Size(size.width + spread * 2, size.height + spread * 2)
-                        val outline = shape.createOutline(wide, layoutDirection, this)
-                        translate(-spread, -spread) {
-                            drawOutline(outline, Chroma.copy(alpha = 0.45f * ring))
-                        }
+                        drawOutline(shape.createOutline(size, layoutDirection, this), Chroma.copy(alpha = 0.28f * ring))
                     }
-                    .background(if (mine) BubbleMine else BubbleOther, shape)
                     .combinedClickable(onClick = { menuOpen = true }, onLongClick = { menuOpen = true })
                     .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             ) {

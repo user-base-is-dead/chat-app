@@ -33,6 +33,7 @@ private const val TYPING_SEND_GAP = 3_000L
 private const val TYPING_SHOW_FOR = 6_000L
 private const val READ_DELAY = 300L
 private const val ONLINE_REFRESH = 30_000L
+private const val SEARCH_WAIT = 300L
 
 enum class SendState { Sending, Sent, Failed }
 
@@ -75,6 +76,7 @@ class ChatRoom(
     private var readJob: Job? = null
     private var typingJob: Job? = null
     private val played = mutableSetOf<String>()
+    private var searchJob: Job? = null
     private val asked = mutableSetOf<String>()
 
     val isChannel = opened.kind == "channel"
@@ -110,6 +112,10 @@ class ChatRoom(
     var onlineCount by mutableStateOf(0)
         private set
     var pinned by mutableStateOf<Message?>(null)
+        private set
+    var searchHits by mutableStateOf(emptyList<Message>())
+        private set
+    var searchBusy by mutableStateOf(false)
         private set
     var jump by mutableStateOf<Jump?>(null)
         private set
@@ -290,6 +296,29 @@ class ChatRoom(
             } catch (error: ApiError) {
                 notice = error.message
             }
+        }
+    }
+
+    fun search(query: String) {
+        searchJob?.cancel()
+        searchHits = emptyList()
+        val needle = query.trim()
+        searchBusy = needle.isNotEmpty()
+        if (needle.isEmpty()) return
+        searchJob = scope.launch {
+            delay(SEARCH_WAIT)
+            var before: Long? = null
+            try {
+                while (true) {
+                    val page = repository.messagesBefore(chatId, before)
+                    val hits = page.filter { it.text.contains(needle, ignoreCase = true) }.map(::toMessage).sortedByDescending { it.number }
+                    if (hits.isNotEmpty()) searchHits = searchHits + hits
+                    if (page.size < MESSAGE_PAGE_SIZE) break
+                    before = page.minOf { it.id.toLong() }
+                }
+            } catch (_: ApiError) {
+            }
+            searchBusy = false
         }
     }
 

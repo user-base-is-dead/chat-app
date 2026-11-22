@@ -434,13 +434,6 @@ fun MainScreen(
                 channelName = if (shownChat.kind == "group") model.openChannelName ?: "general" else null,
                 selfName = user.displayName.ifEmpty { user.username },
                 onBack = model::closeChat,
-                onSearch = {
-                    model.closeChat()
-                    findKind = null
-                    requestsOpen = false
-                    tab = Tab.Chats
-                    model.wantSearch = true
-                },
                 onToggleMute = { model.toggleMute(shownChat) },
                 onDeleteChat = { model.askDelete(shownChat) },
                 userId = user.id,
