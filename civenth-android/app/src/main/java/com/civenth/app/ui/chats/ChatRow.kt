@@ -207,6 +207,8 @@ fun ChatRow(
     needle: String = "",
     withDate: Boolean = false,
     preview: String? = if (chat.kind == "group" && chat.lastSender.isNotEmpty()) "${chat.lastSender}: ${chat.lastText}" else chat.lastText,
+    selected: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -219,17 +221,32 @@ fun ChatRow(
             .padding(horizontal = 8.dp)
             .pressScale(source)
             .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) Surface else Color.Transparent)
             .combinedClickable(
                 interactionSource = source,
                 indication = ripple(),
                 onClick = onClick,
-                onLongClick = if (actionsFor == null) null else ({ menuOpen = true }),
+                onLongClick = onLongPress ?: if (actionsFor == null) null else ({ menuOpen = true }),
             )
             .padding(horizontal = 8.dp, vertical = 9.dp),
     ) {
         Box {
             Avatar(chat.name, 58.dp, disabled = chat.peerDisabled, deleted = chat.peerDeleted, photo = chat.photo)
-            if (chat.peerOnline && !chat.isRoom) {
+            if (selected) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(Surface)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(Chroma),
+                ) {
+                    Icon(painterResource(R.drawable.ic_tick), null, tint = Color.White, modifier = Modifier.size(13.dp))
+                }
+            } else if (chat.peerOnline && !chat.isRoom) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)

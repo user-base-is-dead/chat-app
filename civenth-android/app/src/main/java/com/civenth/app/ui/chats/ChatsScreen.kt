@@ -29,6 +29,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -48,6 +50,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.VisibilityThreshold
@@ -78,6 +82,7 @@ import com.civenth.app.ui.theme.DockAccent
 import com.civenth.app.ui.theme.DockPill
 import com.civenth.app.ui.theme.Ink
 import com.civenth.app.ui.theme.InkMuted
+import com.civenth.app.ui.theme.Panel
 import com.civenth.app.ui.theme.riseIn
 import com.civenth.app.ui.theme.softSpring
 import kotlinx.coroutines.delay
@@ -119,8 +124,26 @@ fun ChatsScreen(
         if (open) {
             ChatSearchPage(model, onOpenChat, onOpenMessage)
         } else {
+            var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+            LaunchedEffect(model.active) {
+                selectedIds = selectedIds.intersect(model.active.map { it.id }.toSet())
+            }
             Column(modifier = Modifier.fillMaxSize()) {
-                ScreenTitle("Chats", model.unreadChats)
+                Box {
+                    Box(modifier = Modifier.alpha(if (selectedIds.isEmpty()) 1f else 0f)) {
+                        ScreenTitle("Chats", model.unreadChats)
+                    }
+                    if (selectedIds.isNotEmpty()) {
+                        ChatSelectionBar(
+                            chats = model.active.filter { it.id in selectedIds },
+                            allChats = model.active,
+                            actionsFor = actionsFor,
+                            onClear = { selectedIds = emptySet() },
+                            onSelectAll = { selectedIds = model.active.map { it.id }.toSet() },
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    }
+                }
                 SearchBar("Search your chats", model::openSearch)
                 FolderPill(model.unreadChats)
                 RequestsRow(model.requests.size, onOpenRequests)
@@ -134,6 +157,11 @@ fun ChatsScreen(
                         empty = "No chats found",
                         bottomSpace = bottomSpace,
                         actionsFor = actionsFor,
+                        selectedIds = selectedIds,
+                        onToggleSelection = { chat ->
+                            selectedIds = if (chat.id in selectedIds) selectedIds - chat.id else selectedIds + chat.id
+                        },
+                        onSelect = { chat -> selectedIds = selectedIds + chat.id },
                         onOpenChat = onOpenChat,
                     )
                 }
@@ -219,6 +247,9 @@ fun ChatList(
     actionsFor: ((Chat) -> List<ChatAction>)? = null,
     withDate: Boolean = false,
     intro: Boolean = true,
+    selectedIds: Set<String> = emptySet(),
+    onToggleSelection: (Chat) -> Unit = {},
+    onSelect: (Chat) -> Unit = {},
     onOpenChat: (Chat) -> Unit,
 ) {
     var introDone by remember { mutableStateOf(!intro) }
@@ -235,12 +266,100 @@ fun ChatList(
             ChatRow(
                 chat = chat,
                 actionsFor = actionsFor,
+                selected = chat.id in selectedIds,
+                onLongPress = if (actionsFor == null) null else ({ onSelect(chat) }),
                 withDate = withDate,
                 modifier = Modifier
                     .animateItem(placementSpec = softSpring(IntOffset.VisibilityThreshold))
                     .riseIn(if (introDone) null else index),
-                onClick = { onOpenChat(chat) },
+                onClick = {
+                    if (selectedIds.isNotEmpty()) onToggleSelection(chat) else onOpenChat(chat)
+                },
             )
+        }
+    }
+}
+
+@Composable
+private fun ChatSelectionBar(
+    chats: List<Chat>,
+    allChats: List<Chat>,
+    actionsFor: (Chat) -> List<ChatAction>,
+    onClear: () -> Unit,
+    onSelectAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val actionSets = chats.map { chat -> actionsFor(chat).filter { !it.danger && it.label != "Copy ID" } }
+    val commonLabels = actionSets.firstOrNull().orEmpty().map { it.label }
+        .filter { label -> actionSets.all { actions -> actions.any { it.label == label } } }
+    val commonActions = commonLabels.map { label ->
+        label to chats.map { chat -> actionsFor(chat).first { it.label == label } }
+    }
+    val visibleActions = commonActions.take(2)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth().pointerInput(Unit) {}.padding(horizontal = 12.dp),
+    ) {
+        androidx.compose.material3.IconButton(onClick = onClear) {
+            Icon(painterResource(R.drawable.ic_close), "Clear selection", tint = Ink)
+        }
+        Text(
+            text = "${chats.size} selected",
+            color = Ink,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        visibleActions.forEach { (label, actions) ->
+            Text(
+                text = label,
+                color = DockAccent,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.pressClickable {
+                    actions.forEach { it.onClick() }
+                    onClear()
+                }.padding(horizontal = 5.dp, vertical = 8.dp),
+            )
+        }
+        Box {
+            androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {
+                Icon(painterResource(R.drawable.ic_more), "Selection actions", tint = Ink)
+            }
+            if (menuOpen) DropdownMenu(
+                expanded = true,
+                onDismissRequest = { menuOpen = false },
+                shape = RoundedCornerShape(18.dp),
+                containerColor = Panel,
+            ) {
+                if (chats.size < allChats.size) {
+                    DropdownMenuItem(
+                        text = { Text("Select all", color = Ink) },
+                        onClick = { menuOpen = false; onSelectAll() },
+                    )
+                }
+                commonActions.drop(2).forEach { (label, actions) ->
+                    DropdownMenuItem(
+                        text = { Text(label, color = Ink) },
+                        onClick = {
+                            menuOpen = false
+                            actions.forEach { it.onClick() }
+                            onClear()
+                        },
+                    )
+                }
+                if (chats.size == 1) {
+                    actionsFor(chats.first()).filter { it.danger || it.label == "Copy ID" }.forEach { action ->
+                        DropdownMenuItem(
+                            text = { Text(action.label, color = if (action.danger) com.civenth.app.ui.theme.Danger else Ink) },
+                            onClick = { menuOpen = false; action.onClick(); onClear() },
+                        )
+                    }
+                }
+            }
         }
     }
 }
