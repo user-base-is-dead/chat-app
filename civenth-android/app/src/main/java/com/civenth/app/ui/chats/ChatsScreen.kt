@@ -300,7 +300,7 @@ private fun ChatSelectionBar(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         modifier = modifier.fillMaxWidth().pointerInput(Unit) {}.padding(horizontal = 12.dp),
     ) {
         androidx.compose.material3.IconButton(onClick = onClear) {
@@ -314,16 +314,26 @@ private fun ChatSelectionBar(
             modifier = Modifier.weight(1f),
         )
         visibleActions.forEach { (label, actions) ->
-            Text(
-                text = label,
-                color = DockAccent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.pressClickable {
+            val icon = actions.first().icon
+            if (icon != null) {
+                androidx.compose.material3.IconButton(onClick = {
                     actions.forEach { it.onClick() }
                     onClear()
-                }.padding(horizontal = 5.dp, vertical = 8.dp),
-            )
+                }) {
+                    Icon(painterResource(icon), label, tint = Ink)
+                }
+            } else {
+                Text(
+                    text = label,
+                    color = DockAccent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.pressClickable {
+                        actions.forEach { it.onClick() }
+                        onClear()
+                    }.padding(horizontal = 5.dp, vertical = 8.dp),
+                )
+            }
         }
         Box {
             androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {

@@ -6,6 +6,7 @@ import CloseIcon from '../Icons/CloseIcon'
 import ConfirmDialog from '../ConfirmDialog/ConfirmDialog'
 import { AlertButtons, AlertsPage } from '../AppAlerts/AppAlerts'
 import ChatListItem from '../ChatListItem/ChatListItem'
+import ChatSelectionBar from '../ChatSelectionBar/ChatSelectionBar'
 import ChatListSkeleton from '../Skeleton/ChatListSkeleton'
 import BottomTabs from '../BottomTabs/BottomTabs'
 import RequestsIcon from '../Icons/RequestsIcon'
@@ -22,6 +23,7 @@ import ChannelList from '../ChannelList/ChannelList'
 import Avatar from '../Avatar/Avatar'
 import { formatCount } from '../../utils/formatCount'
 import { can } from '../../utils/roles'
+import { chatActions } from '../../utils/chatActions'
 
 const folders = [{ id: 'all', label: 'General' }]
 const PIN_LIMIT = 5
@@ -57,6 +59,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
     const [askClear, setAskClear] = useState(false)
     const [findKind, setFindKind] = useState(null)
     const [createKind, setCreateKind] = useState(null)
+    const [selection, setSelection] = useState({ key: '', ids: [] })
     const searchRef = useRef(null)
     const wantSearch = useRef(false)
 
@@ -77,6 +80,26 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
         setAlertsOpen(false)
         setSearchOpen(false)
     }, [activeTab])
+
+    const selectionKey = [activeTab, requestsOpen, searchOpen, findKind, createKind].join('|')
+    const selectedIds = selection.key === selectionKey ? selection.ids.filter((id) => chats.some((chat) => chat.id === id)) : []
+    const setSelectedIds = (update) => setSelection((current) => {
+        const ids = current.key === selectionKey ? current.ids : []
+        return { key: selectionKey, ids: typeof update === 'function' ? update(ids) : update }
+    })
+    const selecting = selectedIds.length > 0
+
+    useEffect(() => {
+        if (!selecting) return
+        const handleKeyDown = (e) => {
+            if (e.key !== 'Escape' || e.defaultPrevented) return
+            e.preventDefault()
+            e.stopPropagation()
+            setSelection({ key: '', ids: [] })
+        }
+        document.addEventListener('keydown', handleKeyDown, true)
+        return () => document.removeEventListener('keydown', handleKeyDown, true)
+    }, [selecting])
 
     useEffect(() => {
         const handlePopState = () => {
@@ -137,6 +160,15 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
     const tabResults = searchResults.chats.filter(({ chat }) => chat.kind === tabKind)
     const tabMessages = searchResults.messages.filter(({ chat }) => chat.kind === tabKind)
     const pinnedCount = chats.filter((chat) => chat.pinned).length
+    const actionsFor = (chat) => chatActions(chat, {
+        onPin: chat.pinned || pinnedCount < PIN_LIMIT ? () => onPinChat(chat) : undefined,
+        onMute: () => onMuteChat(chat),
+        onRestrict: () => onRestrictChat(chat.id),
+        onDelete: () => onDeleteChat(chat.id),
+    })
+    const selectedChats = chats.filter((chat) => selectedIds.includes(chat.id))
+    const selectChat = (chat) => setSelectedIds((ids) => (ids.includes(chat.id) ? ids : [...ids, chat.id]))
+    const toggleChat = (chat) => setSelectedIds((ids) => (ids.includes(chat.id) ? ids.filter((id) => id !== chat.id) : [...ids, chat.id]))
     const unreadChats = chats.filter((chat) => chat.unreadCount > 0 && !chat.muted).length
 
     const inRequests = activeTab === 'chats' && requestsOpen
@@ -253,7 +285,8 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                 )}
                 {!covered && !fullSearch && (
                     <div className={styles.header}>
-                        <div className={styles.titleRow}>
+                        <div className={styles.titleWrap}>
+                        <div className={selectedChats.length > 0 ? `${styles.titleRow} ${styles.titleRowHidden}` : styles.titleRow}>
                             {inRequests && (
                                 <button className={styles.requestsBack} type="button" aria-label="Back" onClick={() => window.history.back()}>
                                     <BackIcon />
@@ -261,6 +294,16 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                             )}
                             <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : styles.title}>{title}</h1>
                             {!inRequests && activeTab !== 'settings' && <AlertButtons onOpen={() => setAlertsOpen(true)} />}
+                        </div>
+                        {selectedChats.length > 0 && (
+                            <ChatSelectionBar
+                                chats={selectedChats}
+                                total={chats.length}
+                                actionsFor={actionsFor}
+                                onClear={() => setSelectedIds([])}
+                                onSelectAll={() => setSelectedIds(chats.map((chat) => chat.id))}
+                            />
+                        )}
                         </div>
                         {activeTab === 'chats' && !inRequests && (
                             <button className={styles.searchFake} type="button" onClick={openSearch}>
@@ -342,7 +385,9 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                     lastMessage={getLastMessage(chat.id)}
                                     active={chat.id === selectedChatId}
                                     leaving={chat.leaving}
-                                    onClick={() => onSelectChat(chat)}
+                                    selected={selectedIds.includes(chat.id)}
+                                    onSelect={() => selectChat(chat)}
+                                    onClick={() => (selectedChats.length > 0 ? toggleChat(chat) : onSelectChat(chat))}
                                     onPin={chat.pinned || pinnedCount < PIN_LIMIT ? () => onPinChat(chat) : undefined}
                                     onMute={() => onMuteChat(chat)}
                                     onRestrict={() => onRestrictChat(chat.id)}

@@ -4,15 +4,15 @@ import Avatar from '../Avatar/Avatar'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import PinIcon from '../Icons/PinIcon'
 import MuteIcon from '../Icons/MuteIcon'
-import UnmuteIcon from '../Icons/UnmuteIcon'
-import DeleteIcon from '../Icons/DeleteIcon'
+import SelectIcon from '../Icons/SelectIcon'
+import TickIcon from '../Icons/TickIcon'
 import HighlightText from '../HighlightText/HighlightText'
-import RestrictIcon from '../Icons/RestrictIcon'
-import CopyIcon from '../Icons/CopyIcon'
-import LogoutIcon from '../Icons/LogoutIcon'
 import { formatCount } from '../../utils/formatCount'
 import { chatStyle } from '../../utils/chroma'
-import { roomLabel } from '../../utils/roomLink'
+import { chatActions } from '../../utils/chatActions'
+
+const HOLD_MS = 450
+const HOLD_SLOP = 10
 
 const pad = (value) => String(value).padStart(2, '0')
 
@@ -21,22 +21,18 @@ function dateTime(ms) {
     return `${pad(day.getDate())}/${pad(day.getMonth() + 1)}/${String(day.getFullYear()).slice(2)} ${pad(day.getHours())}:${pad(day.getMinutes())}`
 }
 
-function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, withDate, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
+function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, withDate, selected, onSelect, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
     const [menu, setMenu] = useState(null)
     const itemRef = useRef(null)
+    const hold = useRef(null)
 
     useLayoutEffect(() => {
         if (leaving) itemRef.current.style.setProperty('--height', `${itemRef.current.offsetHeight}px`)
     }, [leaving])
 
     const items = [
-        onPin && { label: chat.pinned ? 'Unpin' : 'Pin', Icon: PinIcon, onClick: onPin },
-        onMute && (chat.muted ? { label: 'Unmute', Icon: UnmuteIcon, onClick: onMute } : { label: 'Mute', Icon: MuteIcon, onClick: onMute }),
-        onRestrict && { label: 'Restrict', Icon: RestrictIcon, onClick: onRestrict },
-        onUnrestrict && { label: 'Unrestrict', Icon: RestrictIcon, onClick: onUnrestrict },
-        !chat.kind && { label: 'Copy ID', Icon: CopyIcon, onClick: () => navigator.clipboard?.writeText(chat.peerId).catch(() => {}) },
-        onLeave && { label: `Leave ${roomLabel(chat.kind)}`, Icon: LogoutIcon, danger: true, onClick: onLeave },
-        onDelete && { label: chat.kind ? `Delete ${roomLabel(chat.kind)}` : 'Delete Chat', Icon: DeleteIcon, danger: true, onClick: onDelete },
+        onSelect && { label: 'Select', Icon: SelectIcon, onClick: onSelect },
+        ...chatActions(chat, { onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }),
     ].filter(Boolean)
 
     const senderPrefix = chat.kind === 'group' && lastMessage?.senderId
@@ -45,20 +41,65 @@ function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, wi
 
     const openMenu = (e) => {
         e.preventDefault()
+        if (hold.current?.touch) return
         setMenu({ x: e.clientX, y: e.clientY })
     }
 
+    const endHold = () => {
+        if (hold.current) clearTimeout(hold.current.timer)
+    }
+
+    const startHold = (e) => {
+        endHold()
+        hold.current = null
+        if (!onSelect || e.button > 0) return
+        const current = { x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse', fired: false }
+        current.timer = setTimeout(() => {
+            current.fired = true
+            onSelect()
+        }, HOLD_MS)
+        hold.current = current
+    }
+
+    const moveHold = (e) => {
+        const current = hold.current
+        if (current && Math.hypot(e.clientX - current.x, e.clientY - current.y) > HOLD_SLOP) endHold()
+    }
+
+    const handleClick = (e) => {
+        if (hold.current?.fired) {
+            hold.current = null
+            return
+        }
+        onClick?.(e)
+    }
+
+    const itemClass = [
+        active ? styles.itemActive : styles.item,
+        selected && styles.itemSelected,
+        onSelect && styles.holdable,
+        leaving && styles.leaving,
+    ].filter(Boolean).join(' ')
+
     return (
         <div
-            className={[active ? styles.itemActive : styles.item, leaving && styles.leaving].filter(Boolean).join(' ')}
+            className={itemClass}
             ref={itemRef}
             data-zone="chat"
             data-chat-id={chat.id}
             style={{ ...chatStyle(chat), '--i': Math.min(index, 12) }}
-            onClick={onClick}
+            onClick={handleClick}
             onContextMenu={onDelete || onLeave ? openMenu : undefined}
+            onPointerDown={startHold}
+            onPointerMove={moveHold}
+            onPointerUp={endHold}
+            onPointerCancel={endHold}
+            onPointerLeave={endHold}
         >
-            <Avatar name={chat.name} photo={chat.photo} size={52} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+            <span className={styles.avatar}>
+                <Avatar name={chat.name} photo={chat.photo} size={52} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+                {selected && <span className={styles.check}><TickIcon /></span>}
+            </span>
             <div className={styles.info}>
                 <div className={styles.top}>
                     <span className={chat.peerDisabled ? `${styles.name} ${styles.nameDisabled}` : chat.peerDeleted ? `${styles.name} ${styles.nameDeleted}` : styles.name}>

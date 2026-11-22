@@ -168,9 +168,9 @@ fun MainScreen(
     val chatActions: (Chat) -> List<ChatAction> = remember(model) { { chat ->
         buildList {
             val pinned = chat.pinnedAt != null
-            if (pinned || model.canPin) add(ChatAction(if (pinned) "Unpin" else "Pin") { model.togglePin(chat) })
-            add(ChatAction(if (chat.muted) "Unmute" else "Mute") { model.toggleMute(chat) })
-            add(ChatAction("Restrict") { model.restrict(chat) })
+            if (pinned || model.canPin) add(ChatAction(if (pinned) "Unpin" else "Pin", icon = R.drawable.ic_pin) { model.togglePin(chat) })
+            add(ChatAction(if (chat.muted) "Unmute" else "Mute", icon = if (chat.muted) R.drawable.ic_bell else R.drawable.ic_mute) { model.toggleMute(chat) })
+            add(ChatAction("Restrict", icon = R.drawable.ic_restrict) { model.restrict(chat) })
             add(copyId(chat))
             add(deleteAction(chat))
         }
@@ -178,8 +178,8 @@ fun MainScreen(
     val roomActions: (Chat) -> List<ChatAction> = remember(model) { { chat ->
         buildList {
             val pinned = chat.pinnedAt != null
-            if (pinned || model.canPin) add(ChatAction(if (pinned) "Unpin" else "Pin") { model.togglePin(chat) })
-            add(ChatAction(if (chat.muted) "Unmute" else "Mute") { model.toggleMute(chat) })
+            if (pinned || model.canPin) add(ChatAction(if (pinned) "Unpin" else "Pin", icon = R.drawable.ic_pin) { model.togglePin(chat) })
+            add(ChatAction(if (chat.muted) "Unmute" else "Mute", icon = if (chat.muted) R.drawable.ic_bell else R.drawable.ic_mute) { model.toggleMute(chat) })
             val label = roomLabel(chat.kind)
             if (chat.role == "owner") add(ChatAction("Delete $label", danger = true) { model.askDelete(chat) })
             else add(ChatAction("Leave $label", danger = true) { model.askLeave(chat) })

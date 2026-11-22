@@ -1,5 +1,6 @@
 package com.civenth.app.ui.chats
 
+import androidx.annotation.DrawableRes
 import com.civenth.app.ui.theme.AvatarBlankIcon
 import com.civenth.app.ui.theme.AvatarBlank
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -69,6 +70,7 @@ import java.util.Locale
 data class ChatAction(
     val label: String,
     val danger: Boolean = false,
+    @DrawableRes val icon: Int? = null,
     val onClick: () -> Unit,
 )
 
