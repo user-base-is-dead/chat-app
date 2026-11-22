@@ -149,12 +149,7 @@ private fun SettingsMain(
 ) {
     val context = LocalContext.current
     var confirmLogout by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    if (confirmLogout) androidx.compose.material3.AlertDialog(
-        onDismissRequest = { confirmLogout = false },
-        title = { Text("Log out of Civenth on this phone?") },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("Log Out", color = Danger) } },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
-    )
+    if (confirmLogout) LogoutSheet(user, onConfirm = onLogout, onClose = { confirmLogout = false })
     var copied by remember { mutableStateOf<String?>(null) }
     val copy: (String, String) -> Unit = { key, value ->
         copyText(context, value)

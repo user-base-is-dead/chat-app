@@ -11,6 +11,7 @@ import EyeIcon from '../../components/Icons/EyeIcon'
 import BackIcon from '../../components/Icons/BackIcon'
 import DisabledUserIcon from '../../components/Icons/DisabledUserIcon'
 import LogoutIcon from '../../components/Icons/LogoutIcon'
+import LogoutDialog from '../../components/LogoutDialog/LogoutDialog'
 import { getThemeChoice, setThemeChoice } from '../../utils/theme'
 import { revealChange } from '../../utils/motion'
 import { getPrivacy, setPrivacy } from '../../api/users'
@@ -29,6 +30,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [copied, setCopied] = useState(null)
     const [theme, setTheme] = useState(getThemeChoice)
     const [showLastSeen, setShowLastSeen] = useState(null)
+    const [confirmLogout, setConfirmLogout] = useState(false)
 
     useEffect(() => {
         let active = true
@@ -212,7 +214,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
             </div>
 
             <div className={styles.group}>
-                <button className={`${styles.row} ${styles.logout}`} type="button" onClick={onLogout}>
+                <button className={`${styles.row} ${styles.logout}`} type="button" onClick={() => setConfirmLogout(true)}>
                     <span className={`${styles.icon} ${styles.iconRed}`}><LogoutIcon /></span>
                     <span className={styles.rowText}>
                         <span className={styles.rowLabel}>Log Out</span>
@@ -220,6 +222,7 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
                     </span>
                 </button>
             </div>
+            {confirmLogout && <LogoutDialog user={user} onConfirm={onLogout} onClose={() => setConfirmLogout(false)} />}
         </div>
     )
 }
