@@ -21,7 +21,7 @@ function dateTime(ms) {
     return `${pad(day.getDate())}/${pad(day.getMonth() + 1)}/${String(day.getFullYear()).slice(2)} ${pad(day.getHours())}:${pad(day.getMinutes())}`
 }
 
-function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, withDate, selected, onSelect, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
+function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, selected, onSelect, onClick, onPin, onMute, onRestrict, onUnrestrict, onLeave, onDelete }) {
     const [menu, setMenu] = useState(null)
     const itemRef = useRef(null)
     const hold = useRef(null)
@@ -98,6 +98,7 @@ function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, wi
         >
             <span className={styles.avatar}>
                 <Avatar name={chat.name} photo={chat.photo} size={52} disabled={chat.peerDisabled} deleted={chat.peerDeleted} />
+                {!selected && !chat.kind && chat.peerOnline && !chat.peerDisabled && !chat.peerDeleted && <span className={styles.onlineDot} role="img" aria-label="Online" />}
                 {selected && <span className={styles.check}><TickIcon /></span>}
             </span>
             <div className={styles.info}>
@@ -106,7 +107,7 @@ function ChatListItem({ chat, index = 0, lastMessage, active, leaving, query, wi
                         <HighlightText text={chat.name} query={query} />
                         {chat.muted && <span className={styles.mutedMark}><MuteIcon /></span>}
                     </span>
-                    <span className={styles.time}>{lastMessage ? (withDate && lastMessage.createdAt ? dateTime(lastMessage.createdAt) : lastMessage.time) : ''}</span>
+                    <span className={styles.time}>{lastMessage ? (lastMessage.createdAt ? dateTime(lastMessage.createdAt) : lastMessage.time) : ''}</span>
                 </div>
                 <div className={styles.bottom}>
                     <div className={styles.lastMessage}>{lastMessage ? <HighlightText text={`${senderPrefix}${lastMessage.text}`} query={query} /> : ''}</div>

@@ -161,3 +161,9 @@
         animation: none;
     }
 }
+
+.conversationSearch { padding: 10px; max-height: 40%; overflow: auto; background: var(--panel); color: var(--text); }
+.conversationSearch div { display: flex; gap: 8px; }
+.conversationSearch input { flex: 1; min-width: 0; padding: 10px; background: var(--surface); color: inherit; border-radius: 12px; }
+.conversationSearch button { color: inherit; cursor: pointer; padding: 8px; }
+.conversationSearch > button { display: block; width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -45,6 +45,18 @@
     flex-shrink: 0;
 }
 
+.onlineDot {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 15px;
+    height: 15px;
+    box-sizing: border-box;
+    border: 2px solid var(--panel-base);
+    border-radius: 50%;
+    background: #22c55e;
+}
+
 .check {
     position: absolute;
     right: -2px;

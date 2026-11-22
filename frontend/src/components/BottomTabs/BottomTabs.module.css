@@ -43,10 +43,12 @@
     margin: 0;
     padding: 32px;
     border: 0;
-    background: #252525;
+    background: black;
     color: white;
     text-align: center;
 }
+
+:global([data-theme="dark"]) .morePanel { background: white; color: black; }
 
 .morePanel[open] { display: grid; place-content: center; gap: 14px; }
 .morePanel h1 { margin: 0; font-size: 44px; font-weight: 800; }
@@ -64,8 +66,8 @@
     place-items: center;
     border: 0;
     border-radius: 50%;
-    background: rgb(255 255 255 / 18%);
-    color: white;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    color: inherit;
     cursor: pointer;
 }
 .closeMenu svg { width: 22px; height: 22px; }

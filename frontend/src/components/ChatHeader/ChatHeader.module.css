@@ -1,4 +1,5 @@
 .header {
+    --header-hover: color-mix(in srgb, var(--surface-strong) 90%, black);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -12,9 +13,9 @@
 .backButton,
 .peer,
 .actions {
-    height: 56px;
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    height: 46px;
+    border: 0;
+    background: var(--surface-strong);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
@@ -22,16 +23,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
+    width: 46px;
     flex-shrink: 0;
     border-radius: 50%;
     color: var(--text);
     cursor: pointer;
-    transition: background 0.2s, transform 0.25s var(--ease-spring);
+    transition: transform 0.25s var(--ease-spring);
 }
 
 .backButton:active {
-    background: var(--surface);
+    background: var(--header-hover);
     transform: scale(0.9);
 }
 
@@ -44,11 +45,11 @@
     .backButton,
     .peer,
     .actions {
-        height: 50px;
+        height: 46px;
     }
 
     .backButton {
-        width: 50px;
+        width: 46px;
     }
 
 }
@@ -59,16 +60,16 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 0 14px 0 4px;
+    padding: 0 8px 0 0;
     border-radius: 999px;
     text-align: left;
     font: inherit;
     cursor: pointer;
-    transition: background 0.25s var(--ease-out);
 }
 
+.backButton:hover,
 .peer:hover {
-    background: var(--panel);
+    background: var(--header-hover);
 }
 
 .peerText {
@@ -111,7 +112,7 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
-    padding: 0 6px;
+    padding: 0 3px;
     border-radius: 999px;
 }
 
@@ -126,7 +127,7 @@
     background: transparent;
     color: var(--icon);
     cursor: pointer;
-    transition: background 0.25s var(--ease-out), color 0.2s, transform 0.25s var(--ease-spring);
+    transition: transform 0.25s var(--ease-spring);
 }
 
 .action svg {
@@ -135,7 +136,7 @@
 }
 
 .action:hover {
-    background: var(--surface);
+    background: var(--header-hover);
     color: var(--text);
 }
 

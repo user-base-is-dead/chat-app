@@ -19,7 +19,6 @@ import com.civenth.app.ui.theme.BubbleBorder
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -471,11 +470,12 @@ private fun ThemePicker() {
         )
         Row(modifier = Modifier.fillMaxSize()) {
             ThemeChoice.entries.forEach { item ->
-                val label by animateColorAsState(
-                    if (item == active) Color.White else InkMuted,
+                val mix by androidx.compose.animation.core.animateFloatAsState(
+                    if (item == active) 1f else 0f,
                     tween(durationMillis = 280, easing = FastOutSlowInEasing),
                     label = "themeLabel",
                 )
+                val label = androidx.compose.ui.graphics.lerp(InkMuted, Color.White, mix)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier

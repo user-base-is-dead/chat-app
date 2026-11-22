@@ -10,7 +10,6 @@ import androidx.compose.runtime.remember
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
-import androidx.compose.animation.animateColorAsState
 
 import androidx.compose.animation.core.spring
 
@@ -143,7 +142,8 @@ private fun RequestTabs(showRestricted: Boolean, onChange: (Boolean) -> Unit) {
         Row(modifier = Modifier.fillMaxSize()) {
             listOf(false to "Message Requests", true to "Restricted").forEach { (restricted, label) ->
                 val selected = restricted == showRestricted
-                val color by animateColorAsState(if (selected) Ink else InkMuted, tween(220), label = "tabText")
+                val mix by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, tween(220), label = "tabText")
+                val color = androidx.compose.ui.graphics.lerp(InkMuted, Ink, mix)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier

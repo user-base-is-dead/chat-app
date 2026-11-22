@@ -23,7 +23,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -568,7 +567,8 @@ private fun Dock(active: Tab, onChange: (Tab) -> Unit, modifier: Modifier = Modi
         Row(modifier = Modifier.fillMaxWidth()) {
             Tab.entries.forEach { item ->
                 val selected = item == active
-                val tint by animateColorAsState(if (selected) DockAccent else InkMuted, tween(220), label = "tint")
+                val mix by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0f, tween(220), label = "tint")
+                val tint = androidx.compose.ui.graphics.lerp(InkMuted, DockAccent, mix)
                 val lift by animateFloatAsState(
                     targetValue = if (selected) 1f else 0f,
                     animationSpec = spring(dampingRatio = 0.6f, stiffness = 420f),

@@ -69,6 +69,8 @@ fun MenuScreen() {
     }
     if (!SideMenu.open && progress.value == 0f) return
     BackHandler(enabled = SideMenu.open) { SideMenu.open = false }
+    val dark = com.civenth.app.ui.theme.Appearance.dark
+    val foreground = if (dark) Color.Black else Color.White
     val origin = SideMenu.origin
     val close = { SideMenu.open = false }
 
@@ -84,7 +86,7 @@ fun MenuScreen() {
                 val circle = Path().apply { addOval(Rect(origin, far * progress.value)) }
                 clipPath(circle) { this@drawWithContent.drawContent() }
             }
-            .background(Color(0xFF252525)),
+            .background(if (dark) Color.White else Color.Black),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -98,7 +100,7 @@ fun MenuScreen() {
                 val shown = stage(progress.value, 0.45f + index * 0.12f)
                 Text(
                     text = text,
-                    color = Color.White.copy(alpha = if (index == 0) 1f else 0.82f),
+                    color = foreground.copy(alpha = if (index == 0) 1f else 0.82f),
                     fontSize = size,
                     fontWeight = weight,
                     textAlign = TextAlign.Center,
@@ -122,10 +124,10 @@ fun MenuScreen() {
                     alpha = turn
                 }
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.18f))
+                .background(foreground.copy(alpha = 0.18f))
                 .clickable(onClick = close),
         ) {
-            Icon(painterResource(R.drawable.ic_close), "Close", tint = Color.White, modifier = Modifier.size(22.dp))
+            Icon(painterResource(R.drawable.ic_close), "Close", tint = foreground, modifier = Modifier.size(22.dp))
         }
     }
 }

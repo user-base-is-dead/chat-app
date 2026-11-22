@@ -1,6 +1,5 @@
 package com.civenth.app.ui.theme
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -39,11 +38,12 @@ fun SmoothSwitch(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) 
         animationSpec = tween<Dp>(SWITCH_TIME, easing = FastOutSlowInEasing),
         label = "thumb",
     )
-    val track by animateColorAsState(
-        targetValue = if (checked) Chroma else SurfaceStrong,
+    val mix by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
         animationSpec = tween(SWITCH_TIME, easing = FastOutSlowInEasing),
         label = "track",
     )
+    val track = androidx.compose.ui.graphics.lerp(SurfaceStrong, Chroma, mix)
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier

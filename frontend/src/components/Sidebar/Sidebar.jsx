@@ -428,7 +428,6 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, syncStatus, onRet
                                     chat={chat}
                                     index={index}
                                     lastMessage={getLastMessage(chat.id)}
-                                    withDate
                                     active={chat.id === selectedChatId}
                                     leaving={chat.leaving}
                                     onClick={() => onSelectChat(chat)}
@@ -444,7 +443,6 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, syncStatus, onRet
                                     chat={chat}
                                     index={index}
                                     lastMessage={getLastMessage(chat.id)}
-                                    withDate
                                     active={chat.id === selectedChatId}
                                     leaving={chat.leaving}
                                     onClick={() => onSelectChat(chat)}

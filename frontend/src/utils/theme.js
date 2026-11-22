@@ -6,6 +6,7 @@ const DEFAULT_CHOICE = 'light'
 const DEFAULT_COLOR = 'default'
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
+
 export function getThemeChoice() {
     try {
         return localStorage.getItem(KEY) || DEFAULT_CHOICE
@@ -16,7 +17,13 @@ export function getThemeChoice() {
 
 function applyTheme(choice) {
     const dark = choice === 'dark' || (choice === 'system' && darkQuery.matches)
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    const root = document.documentElement
+    const theme = dark ? 'dark' : 'light'
+    if (root.dataset.theme === theme) return
+    root.dataset.switchingTheme = ''
+    root.dataset.theme = theme
+    getComputedStyle(document.body).backgroundColor
+    delete root.dataset.switchingTheme
 }
 
 export function setThemeChoice(choice) {

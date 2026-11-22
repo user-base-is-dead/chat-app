@@ -16,7 +16,7 @@ import JoinDialog from '../../components/JoinDialog/JoinDialog'
 import Toast from '../../components/Toast/Toast'
 import { chatStyle } from '../../utils/chroma'
 import { animateChange, isPhone, morphChange } from '../../utils/motion'
-import { inSidebar } from '../../utils/zone'
+import ConversationSearch from './ConversationSearch'
 import {
     acceptChat,
     deleteChat as removeChat,
@@ -230,7 +230,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [typingUntil, setTypingUntil] = useState({})
     const [typingNames, setTypingNames] = useState({})
     const [toast, setToast] = useState(null)
-    const [searchFocus, setSearchFocus] = useState(0)
+    const [innerSearch, setInnerSearch] = useState(null)
     const [inputFocus, setInputFocus] = useState(false)
     const [joining, setJoining] = useState(null)
     const [roomTick, setRoomTick] = useState(0)
@@ -351,6 +351,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
             const state = window.history.state
             const closing = !state?.chatOpen && !state?.infoOpen && openChatRef.current !== null
             const apply = () => {
+                setInnerSearch(state?.searchChat ?? null)
                 setInfoOpen(Boolean(state?.infoOpen))
                 setMembersScreen(Boolean(state?.membersOpen))
                 if (!state?.commentsOpen) setCommentsFor(null)
@@ -366,12 +367,16 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     useEffect(() => {
         if (!selectedChatId) return
         const handleKeyDown = (e) => {
-            if (e.key !== 'Escape' || e.defaultPrevented || inSidebar()) return
-            window.history.back()
+            if (e.key !== 'Escape' || e.defaultPrevented || e.repeat || document.querySelector('dialog[open], [aria-modal="true"], [role="menu"]')) return
+            if (window.history.state?.searchChat || window.history.state?.infoOpen || window.history.state?.commentsOpen || window.history.state?.membersOpen) window.history.back()
+            else if (inputMode?.chatId === selectedChatId) closeMode()
+            else if (groupOpen && membersPanel && !isPhone()) toggleMembers()
+            else if (window.history.state?.chatOpen) window.history.back()
+            else setSelectedChatId(null)
         }
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [selectedChatId])
+    }, [selectedChatId, inputMode, membersPanel, chats])
 
     useEffect(() => {
         openChatRef.current = selectedChatId
@@ -808,8 +813,9 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     }
 
     const focusSearch = () => {
-        if (window.matchMedia('(max-width: 768px)').matches) window.history.go(infoOpen ? -2 : -1)
-        setSearchFocus((count) => count + 1)
+        if (!selectedChatId || window.history.state?.searchChat === selectedChatId) return
+        window.history.pushState({ ...window.history.state, chatOpen: true, searchChat: selectedChatId }, '')
+        setInnerSearch(selectedChatId)
     }
 
     const closeConfirm = () => setConfirm(null)
@@ -1277,7 +1283,10 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         })
     }
 
-    const chatHeader = selectedChat && (
+    const chatHeader = selectedChat && innerSearch === selectedChat.id ? (
+        <ConversationSearch key={selectedChat.id} chatId={selectedChat.id} onClose={() => window.history.back()}
+            onPick={(id) => { window.history.back(); jumpTo(selectedChat.id, id) }} />
+    ) : selectedChat && (
         <ChatHeader
             chat={selectedGroup}
             channelName={channelLabel}
@@ -1350,7 +1359,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                     selectedChatId={selectedChat?.id}
                     getLastMessage={getLastMessage}
                     search={search}
-                    searchFocus={searchFocus}
+                    searchFocus={0}
                     onSearchChange={setSearch}
                     onSelectChat={openChat}
                     onOpenMessage={openMessage}

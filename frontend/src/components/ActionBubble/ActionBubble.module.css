@@ -56,6 +56,14 @@
     transform: rotate(-12deg);
 }
 
+:global([data-theme="dark"]) .menu {
+    box-shadow: 0 3px 10px rgb(0 0 0 / 22%);
+}
+
+:global([data-theme="dark"]) .button {
+    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+}
+
 .menu {
     min-width: 220px;
     padding: 6px;

@@ -18,7 +18,6 @@ import androidx.compose.animation.core.spring
 
 import androidx.compose.animation.core.animateFloatAsState
 
-import androidx.compose.animation.animateColorAsState
 
 import com.civenth.app.ui.theme.pressClickable
 import com.civenth.app.ui.theme.pressCombined
@@ -203,7 +202,8 @@ fun ChannelColumn(
             val row: @Composable (RoomChannel) -> Unit = { channel ->
                 val open = channel.id == openId
                 val unread = channel.unreadCount > 0
-                val tint by animateColorAsState(if (open) DockPill else Color.Transparent, tween(180), label = "channelTint")
+                val mix by androidx.compose.animation.core.animateFloatAsState(if (open) 1f else 0f, tween(180), label = "channelTint")
+                val tint = DockPill.copy(alpha = DockPill.alpha * mix)
                 Box {
                     if (unread && !open) Box(
                         modifier = Modifier

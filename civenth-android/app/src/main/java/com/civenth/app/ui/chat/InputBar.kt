@@ -4,7 +4,6 @@ import com.civenth.app.ui.theme.SoftShadow
 import androidx.compose.ui.draw.shadow
 import android.icu.text.BreakIterator
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -144,8 +143,9 @@ fun InputBar(
     val sendSource = remember { MutableInteractionSource() }
     val sendScale by animateFloatAsState(if (ready) 1f else 0.9f, bouncySpring(), label = "sendScale")
     val sendTurn by animateFloatAsState(if (ready) 0f else -35f, bouncySpring(), label = "sendTurn")
-    val sendColor by animateColorAsState(if (ready) Chroma else Surface, label = "sendColor")
-    val sendTint by animateColorAsState(if (ready) Color.White else MutedIcon, label = "sendTint")
+    val sendMix by animateFloatAsState(if (ready) 1f else 0f, label = "sendMix")
+    val sendColor = androidx.compose.ui.graphics.lerp(Surface, Chroma, sendMix)
+    val sendTint = androidx.compose.ui.graphics.lerp(MutedIcon, Color.White, sendMix)
     val closeForKeyboard = {
         if (emojiOpen) {
             emojiOpen = false
@@ -191,11 +191,10 @@ fun InputBar(
             modifier = Modifier
                 .padding(start = 8.dp, end = 8.dp, bottom = 6.dp)
                 .fillMaxWidth()
-                .shadow(10.dp, BarShape, ambientColor = SoftShadow, spotColor = SoftShadow)
+                .shadow(4.dp, BarShape, ambientColor = SoftShadow, spotColor = SoftShadow)
                 .clip(BarShape)
-                .background(Panel)
-                .border(1.dp, BorderStrong, BarShape)
-                .padding(4.dp),
+                .background(com.civenth.app.ui.theme.SurfaceStrong)
+                .padding(2.dp),
         ) {
         strip?.invoke()
         Row(
@@ -207,10 +206,10 @@ fun InputBar(
                 contentAlignment = Alignment.CenterStart,
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 46.dp)
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                    .heightIn(min = 44.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
             ) {
-                if (value.text.isEmpty()) Text(placeholder, color = InkMuted, fontSize = 17.5.sp)
+                if (value.text.isEmpty()) Text(placeholder, color = androidx.compose.ui.graphics.lerp(Panel, Ink, 0.72f), fontSize = 17.5.sp)
                 BasicTextField(
                     value = value,
                     onValueChange = {
@@ -251,7 +250,7 @@ fun InputBar(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .padding(start = 2.dp)
-                    .size(46.dp)
+                    .size(44.dp)
                     .graphicsLayer {
                         scaleX = sendScale
                         scaleY = sendScale
@@ -312,7 +311,7 @@ private fun BarButton(icon: Int, label: String, active: Boolean, onClick: () -> 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(46.dp)
+            .size(44.dp)
             .pressScale(source, pressed = 0.86f)
             .clip(CircleShape)
             .background(if (active) Chroma.copy(alpha = 0.11f) else Color.Transparent)

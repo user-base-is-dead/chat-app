@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -65,6 +66,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -147,7 +149,7 @@ private const val FLASH_FOR = 2_000L
 private val DoodleTile = 300.dp
 private val ChatDoodleTile = 520.dp
 private val Neutral = Color(0xFF7C7A84)
-private val HeaderSpace = 84.dp
+private val HeaderSpace = 74.dp
 private val PinnedSpace = 60.dp
 private val PinnedTop = 72.dp
 private const val JUMP_NEAR = 10
@@ -885,6 +887,7 @@ fun ChatScreen(
         val plural = many != null && many.messages.size > 1
         AlertDialog(
             onDismissRequest = { confirm = null },
+            icon = if (deleting != null || many != null) ({ Icon(painterResource(R.drawable.ic_delete), null, tint = Danger, modifier = Modifier.size(34.dp)) }) else null,
             title = {
                 Text(
                     when {
@@ -892,6 +895,7 @@ fun ChatScreen(
                         deleting != null || many != null -> "Delete message?"
                         else -> "Delete chat?"
                     },
+                    fontSize = 25.sp, fontWeight = FontWeight.SemiBold,
                 )
             },
             text = {
@@ -901,10 +905,14 @@ fun ChatScreen(
                         deleting != null || many != null -> "This message will be deleted for everyone."
                         else -> "All messages in this chat will be deleted for everyone."
                     },
+                    fontSize = 17.sp, lineHeight = 24.sp,
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(
+                    modifier = Modifier.widthIn(min = 112.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = Danger.copy(alpha = 0.12f)),
+                    onClick = {
                     confirm = null
                     when {
                         many != null -> {
@@ -915,11 +923,11 @@ fun ChatScreen(
                         else -> room.deleteChat()
                     }
                 }) {
-                    Text("Yes", color = Danger)
+                    Text("Delete", color = Danger, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirm = null }) { Text("No", color = Ink) }
+                TextButton(onClick = { confirm = null }) { Text("Cancel", color = Ink, fontSize = 17.sp) }
             },
         )
     }
@@ -1075,9 +1083,9 @@ private fun Header(
                 .height(HeaderPillHeight)
                 .floatingPill(CircleShape)
                 .pressClickable(onClick = onOpenInfo)
-                .padding(start = 5.dp, end = 14.dp),
+                .padding(end = 8.dp),
         ) {
-            Avatar(chat.name, 46.dp, disabled = chat.peerDisabled, deleted = chat.peerDeleted, photo = chat.photo)
+            Avatar(chat.name, HeaderPillHeight, disabled = chat.peerDisabled, deleted = chat.peerDeleted, photo = chat.photo)
             Column(
                 modifier = Modifier
                     .padding(start = 10.dp)
@@ -1100,7 +1108,7 @@ private fun Header(
             modifier = Modifier
                 .height(HeaderPillHeight)
                 .floatingPill(CircleShape)
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 3.dp),
         ) {
         if (!chat.isRoom) IconBox(R.drawable.ic_call, "Call", Ink, onCall)
         if (onMembers != null) IconBox(R.drawable.ic_groups, "Members", Ink, onMembers)
@@ -1130,14 +1138,13 @@ private fun Header(
     }
 }
 
-private val HeaderPillHeight = 56.dp
+private val HeaderPillHeight = 46.dp
 
 private fun Modifier.floatingPill(shape: androidx.compose.ui.graphics.Shape): Modifier = composed {
     this
         .shadow(8.dp, shape, ambientColor = SoftShadow, spotColor = SoftShadow)
         .clip(shape)
-        .background(Panel.copy(alpha = 0.96f))
-        .border(1.dp, BubbleBorder, shape)
+        .background(com.civenth.app.ui.theme.SurfaceStrong)
 }
 
 @Composable
@@ -1190,7 +1197,7 @@ private fun SelectionBar(
             modifier = Modifier
                 .height(HeaderPillHeight)
                 .floatingPill(CircleShape)
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 3.dp),
         ) {
             actions.forEach { action ->
                 BarIcon(action.icon, action.label, if (action.danger) Danger else Ink, action.onClick)
@@ -1210,11 +1217,12 @@ private fun BarIcon(icon: Int, label: String, tint: Color, onClick: () -> Unit) 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(40.dp)
+            .size(width = if (icon == R.drawable.ic_delete) 56.dp else 40.dp, height = if (icon == R.drawable.ic_delete) 46.dp else 40.dp)
             .clip(CircleShape)
+            .background(if (icon == R.drawable.ic_delete) Danger.copy(alpha = 0.10f) else Color.Transparent)
             .pressClickable(onClick = onClick),
     ) {
-        Icon(painterResource(icon), label, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(painterResource(icon), label, tint = tint, modifier = Modifier.size(if (icon == R.drawable.ic_delete) 28.dp else 22.dp))
     }
 }
 
@@ -1282,6 +1290,7 @@ fun PeerStatus(chat: Chat, typing: Boolean, typingName: String? = null, onlineCo
             }
             Text(
                 text = shown,
+                modifier = if (!chat.isRoom && shown.startsWith("last seen")) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier,
                 color = if (active) Chroma else InkMuted,
                 fontSize = 15.sp,
                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,

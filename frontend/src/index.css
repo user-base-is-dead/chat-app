@@ -23,25 +23,26 @@
 }
 
 :root {
+    background-color: var(--canvas);
     color-scheme: light;
     --doodle: url('./assets/doodle-pattern-light.svg');
     --doodle-solid: url('./assets/doodle-solid.svg');
     --font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Color Emoji', sans-serif;
     --font-display: var(--font-ui);
-    --canvas: #F7F7F7;
+    --canvas: #EFEBE3;
     --bg: var(--canvas);
     --bg-gradient: var(--bg);
-    --panel-base: #FFFFFF;
-    --surface-base: #EEEEEE;
+    --panel-base: #F8F5EF;
+    --surface-base: #E7E2D8;
     --panel: var(--panel-base);
     --surface: var(--surface-base);
-    --surface-strong: #E4E4E4;
-    --stage: #F7F7F7;
+    --surface-strong: #DDD7CB;
+    --stage: #EFEBE3;
     --stage-tint: 0%;
-    --doodle-ink: #EAEAEA;
+    --doodle-ink: #E3DDD1;
     --bubble-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
-    --glass: rgba(255, 255, 255, 0.94);
-    --dock: rgba(255, 255, 255, 0.94);
+    --glass: rgba(248, 245, 239, 0.94);
+    --dock: rgba(248, 245, 239, 0.94);
     --rail: #131313;
     --rail-border: transparent;
     --on-rail: #FFFFFF;
@@ -49,9 +50,9 @@
     --on-fab: #FFFFFF;
     --border: rgba(61, 57, 41, 0.13);
     --border-strong: rgba(61, 57, 41, 0.24);
-    --text: #202020;
-    --text-muted: #686868;
-    --icon: #686868;
+    --text: #2A2622;
+    --text-muted: #6E675E;
+    --icon: #6E675E;
     --muted-icon: #B0ADA4;
     --muted-badge: #CFCBC0;
     --accent: var(--chroma);
@@ -62,12 +63,12 @@
     --on-accent: #FFFFFF;
     --avatar-blank: #F3E3DA;
     --avatar-blank-icon: #DDA28C;
-    --bubble-other: #FFFFFF;
+    --bubble-other: #F8F5EF;
     --bubble-other-text: #202020;
     --bubble-other-muted: #8C897F;
     --bubble-ring: rgba(61, 57, 41, 0.14);
     --bubble-mine-mix: 100%;
-    --bubble-mine-base: #FFFFFF;
+    --bubble-mine-base: #F8F5EF;
     --bubble-mine-shadow: none;
     --bubble-mine-ring: transparent;
     --bubble-mine-selection: rgba(255, 255, 255, 0.35);
@@ -326,4 +327,10 @@ html[data-motion="theme"]::view-transition-new(root) {
         transform: translateX(-25%);
         opacity: 0.4;
     }
+}
+:root[data-switching-theme],
+:root[data-switching-theme] *,
+:root[data-switching-theme] *::before,
+:root[data-switching-theme] *::after {
+    transition: none !important;
 }

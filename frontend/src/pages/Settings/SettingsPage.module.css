@@ -136,19 +136,6 @@
     background: var(--surface-strong);
 }
 
-.themeSlider {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
-    width: calc((100% - 8px) / 3);
-    border-radius: 8px;
-    background: var(--panel);
-    box-shadow: var(--shadow-small);
-    transform: translateX(calc(var(--slot, 0) * 100%));
-    transition: transform 0.5s var(--ease-out);
-}
-
 .themeOption {
     position: relative;
     z-index: 1;
@@ -160,7 +147,12 @@
     font-weight: 600;
     color: var(--text-muted);
     cursor: pointer;
-    transition: color 0.3s;
+    border-radius: 8px;
+}
+
+.themeActive {
+    background: var(--panel);
+    box-shadow: var(--shadow-small);
 }
 
 .themeOption:hover,
@@ -484,9 +476,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .themeSlider {
-        transition: none;
-    }
 }
 
 .switchRow {

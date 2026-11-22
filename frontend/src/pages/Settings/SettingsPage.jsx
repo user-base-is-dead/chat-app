@@ -13,7 +13,7 @@ import DisabledUserIcon from '../../components/Icons/DisabledUserIcon'
 import LogoutIcon from '../../components/Icons/LogoutIcon'
 import LogoutDialog from '../../components/LogoutDialog/LogoutDialog'
 import { getThemeChoice, setThemeChoice } from '../../utils/theme'
-import { revealChange } from '../../utils/motion'
+import { flushSync } from 'react-dom'
 import { getPrivacy, setPrivacy } from '../../api/users'
 import ProfileSettings from './ProfileSettings'
 import AccountSettings from './AccountSettings'
@@ -53,12 +53,10 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
         }
     }
 
-    const chooseTheme = (choice, e) => {
+    const chooseTheme = (choice) => {
         if (choice === theme) return
-        revealChange(() => {
-            setThemeChoice(choice)
-            setTheme(choice)
-        }, e.clientX, e.clientY)
+        flushSync(() => setTheme(choice))
+        setThemeChoice(choice)
     }
 
     const copy = async (key, value) => {
@@ -181,14 +179,14 @@ function SettingsPage({ user, onLogout, onUserChange, onAccountGone }) {
             <div className={styles.group}>
                 <span className={styles.groupTitle}>Appearance</span>
                 <span className={styles.groupHint}>Pick light or dark, or follow your device</span>
-                <div className={styles.themes} style={{ '--slot': themes.findIndex((item) => item.id === theme) }}>
-                    <span className={styles.themeSlider} />
+                <div className={styles.themes}>
                     {themes.map((item) => (
                         <button
                             key={item.id}
                             className={item.id === theme ? `${styles.themeOption} ${styles.themeActive}` : styles.themeOption}
                             type="button"
-                            onClick={(e) => chooseTheme(item.id, e)}
+                            aria-pressed={item.id === theme}
+                            onClick={() => chooseTheme(item.id)}
                         >
                             {item.label}
                         </button>

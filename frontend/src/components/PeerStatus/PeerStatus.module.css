@@ -19,6 +19,8 @@
     white-space: nowrap;
 }
 
+.scrollable { width: max-content; max-width: none; }
+
 .active {
     font-weight: 500;
     color: color-mix(in srgb, var(--chroma) 72%, var(--text));
