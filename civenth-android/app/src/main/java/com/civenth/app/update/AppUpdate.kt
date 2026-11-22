@@ -165,6 +165,10 @@ object AppUpdate {
                     playUrl = it.optString("playUrl"),
                 )
             }
+            if (download == DownloadState.Ready && latest?.code != readyCode) {
+                readyCode = 0
+                download = DownloadState.Idle
+            }
         } catch (_: JSONException) {
         }
     }

@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
     [Parameter(Mandatory = $true)][string]$Notes,
-    [string]$LanHost = '192.168.31.73'
+    [string]$LanHost = '192.168.31.73',
+    [switch]$Required
 )
 
 $ErrorActionPreference = 'Stop'
@@ -98,3 +99,10 @@ try {
 Copy-Item $Target (Join-Path $env:USERPROFILE 'Downloads/Civenth.apk') -Force
 Remove-Item $Staged
 Write-Host "Published Civenth $Version (versionCode $Code): $url"
+
+if ($Required) {
+    Invoke-Sql "update app_platforms set min_version = $Code where platform = 'android'" | Out-Null
+    $rule = Invoke-RestMethod "http://127.0.0.1:8080/v1/app/version?platform=android"
+    if ($rule.minVersion -ne $Code) { throw "Release is live, but the server still asks for version $($rule.minVersion). Older versions are not blocked." }
+    Write-Host "Update is now required. Versions below $Code are blocked."
+}
