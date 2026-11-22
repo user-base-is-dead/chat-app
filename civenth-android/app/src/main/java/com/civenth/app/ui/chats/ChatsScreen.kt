@@ -218,16 +218,29 @@ fun SearchResults(
 @Composable
 fun ScreenTitle(title: String, model: ChatsViewModel, count: Int = 0) {
     val label = model.syncLabel
-    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
-        Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.Center) {
+    androidx.compose.ui.layout.Layout(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(54.dp),
+        content = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.then(if (label.endsWith("Retry")) Modifier.clickable { model.refreshNow() } else Modifier)) {
-                Text(label.ifEmpty { title }, color = DockAccent, fontSize = if (label.isEmpty()) 28.sp else 20.sp, fontWeight = FontWeight.Bold)
+                Text(label.ifEmpty { title }, color = DockAccent, fontSize = if (label.isEmpty()) 28.sp else 20.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (count > 0 && label.isEmpty()) CountBadge(count)
             }
-            if (!com.civenth.app.update.AppUpdate.available) AppAlerts(Modifier.align(Alignment.CenterEnd))
+            AppAlerts()
+        },
+    ) { parts, limits ->
+        val width = limits.maxWidth
+        val height = limits.maxHeight
+        val gap = 8.dp.roundToPx()
+        val alerts = parts[1].measure(limits.copy(minWidth = 0, minHeight = 0))
+        val room = (width - alerts.width - gap).coerceAtLeast(0)
+        val heading = parts[0].measure(limits.copy(minWidth = 0, minHeight = 0, maxWidth = room))
+        layout(width, height) {
+            val x = minOf((width - heading.width) / 2, room - heading.width).coerceAtLeast(0)
+            heading.place(x, (height - heading.height) / 2)
+            alerts.place(width - alerts.width, (height - alerts.height) / 2)
         }
-        if (com.civenth.app.update.AppUpdate.available) AppAlerts(Modifier.align(Alignment.End))
     }
 }
 
