@@ -154,6 +154,7 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stop() {
+        refreshJob?.cancel()
         realtime.stop()
     }
 
@@ -394,18 +395,39 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
             .launchIn(viewModelScope)
     }
 
+    var syncError by mutableStateOf("")
+        private set
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
+    private suspend fun loadWithRetry(onPhase: (String) -> Unit): List<Chat> {
+        var retries = 0
+        while (true) {
+            try {
+                return app.chats.list { onPhase("Updating…") }
+            } catch (error: ApiError) {
+                if (retries >= 3 || (error.code != "network" && error.status !in 500..599)) throw error
+                onPhase("Reconnecting…")
+                kotlinx.coroutines.delay(1000L shl retries)
+                retries++
+            }
+        }
+    }
+
     private var refreshSequence = 0
     var syncLabel by mutableStateOf("")
         private set
 
     private fun refresh() {
         val request = ++refreshSequence
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        syncError = ""
+        failed = false
+        refreshJob = viewModelScope.launch {
             var phase = "Loading…"
             val statusTimer = launch { kotlinx.coroutines.delay(220); if (request == refreshSequence) syncLabel = phase }
             try {
-                val list = app.chats.list {
-                    phase = "Updating…"
+                val list = loadWithRetry { nextPhase ->
+                    phase = nextPhase
                     if (request == refreshSequence && statusTimer.isCompleted) syncLabel = phase
                 }
                 if (request != refreshSequence) return@launch
@@ -419,7 +441,8 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
                 list.firstOrNull { it.id == shownGroup?.id && it.status == "active" }?.let { loadChannels(it.id) }
             } catch (error: ApiError) {
                 if (request != refreshSequence) return@launch
-                syncLabel = if (error.status == 0) "Offline · Retry" else "Retry"
+                syncLabel = ""
+                if (error.status != 401) syncError = if (error.code == "network") "Cannot reach the server." else "Could not update your chats."
                 if (error.status == 401) sessionLost = true else failed = true
             } finally {
                 statusTimer.cancel()

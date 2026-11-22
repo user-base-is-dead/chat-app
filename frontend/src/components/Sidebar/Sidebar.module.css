@@ -628,9 +628,12 @@
     }
 }
 
-.centerTitle { composes: title; }
-.centerTitle button { font: inherit; color: inherit; cursor: pointer; }
-@media (min-width: 769px) {
-    .titleRow:has(.centerTitle) { justify-content: flex-end; }
-    .centerTitle { position: absolute; left: 50%; transform: translateX(-50%); padding: 0; max-width: calc(100% - 96px); animation: none; }
+.centerTitle { composes: title; color: var(--chroma); position: absolute; left: 50%; transform: translateX(-50%); padding: 0; max-width: calc(100% - 100px); animation: none; }
+.titleRow:has(.centerTitle) { justify-content: flex-end; }
+.mobileMore { display: none; }
+.syncError { display: grid; justify-items: center; gap: 8px; padding: 20px; text-align: center; }
+.syncError button { color: var(--chroma); cursor: pointer; }
+@media (max-width: 768px) {
+    .mobileMore { display: grid; place-items: center; margin-right: auto; width: 44px; height: 44px; border-radius: 50%; background: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    .mobileMore svg { width: 22px; height: 22px; }
 }

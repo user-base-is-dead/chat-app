@@ -261,8 +261,19 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         const show = () => { if (request === listRequest.current) setSyncStatus(phase) }
         const timer = setTimeout(() => { slow = true; show() }, 250)
         try {
-            const result = await loadAll(previous, () => { phase = 'Updating…'; if (slow) show() })
-            if (request === listRequest.current) { setChats(result); setSyncStatus('') }
+            for (let attempt = 0; request === listRequest.current; attempt++) {
+                try {
+                    const result = await loadAll(previous, () => { phase = 'Updating…'; if (slow) show() })
+                    if (request === listRequest.current) { setChats(result); setSyncStatus('') }
+                    break
+                } catch (error) {
+                    if (request !== listRequest.current) return
+                    if (attempt >= 3 || (error.status !== 0 && error.status < 500)) throw error
+                    phase = 'Reconnecting…'
+                    show()
+                    await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt))
+                }
+            }
         } catch (error) {
             phase = error.status === 0 ? 'Offline' : 'Sync failed'
             show()

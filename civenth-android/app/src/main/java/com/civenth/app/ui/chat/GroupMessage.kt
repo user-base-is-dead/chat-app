@@ -194,7 +194,11 @@ fun GroupMessage(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(if (focused) Chroma.copy(alpha = 0.18f) else Color.Transparent)
+                    .background(when {
+                        selected -> Ink.copy(alpha = 0.16f)
+                        focused -> Chroma.copy(alpha = 0.18f)
+                        else -> Color.Transparent
+                    })
                     .drawBehind {
                         if (shadow.value > 0f) drawRect(shadowColor.copy(alpha = shadow.value))
                     }

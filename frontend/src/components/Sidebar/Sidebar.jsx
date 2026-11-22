@@ -8,7 +8,7 @@ import { AlertButtons, AlertsPage } from '../AppAlerts/AppAlerts'
 import ChatListItem from '../ChatListItem/ChatListItem'
 import ChatSelectionBar from '../ChatSelectionBar/ChatSelectionBar'
 import ChatListSkeleton from '../Skeleton/ChatListSkeleton'
-import BottomTabs from '../BottomTabs/BottomTabs'
+import BottomTabs, { MoreMenu } from '../BottomTabs/BottomTabs'
 import RequestsIcon from '../Icons/RequestsIcon'
 import BackIcon from '../Icons/BackIcon'
 import GroupsPage from '../../pages/Groups/GroupsPage'
@@ -294,7 +294,8 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, syncStatus, onRet
                                     <BackIcon />
                                 </button>
                             )}
-                            <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : pageHeader ? styles.centerTitle : styles.title}>{pageHeader && syncStatus ? (retry ? <button onClick={onRetry}>{syncStatus} · Retry</button> : syncStatus) : title}</h1>
+                            {pageHeader && <MoreMenu className={styles.mobileMore} />}
+                            <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : pageHeader ? styles.centerTitle : styles.title}>{pageHeader && syncStatus && !retry ? syncStatus : title}</h1>
                             {!inRequests && activeTab !== 'settings' && <AlertButtons onOpen={() => setAlertsOpen(true)} />}
                         </div>
                         {selectedChats.length > 0 && (
@@ -351,6 +352,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, syncStatus, onRet
                         ))}
                     </div>
                 )}
+                {!covered && !fullSearch && pageHeader && retry && <div className={styles.syncError} role="status"><span>{syncStatus === 'Offline' ? 'Cannot reach the server.' : 'Could not update your chats.'}</span><button type="button" onClick={onRetry}>Retry</button></div>}
                 {!covered && !fullSearch && activeTab === 'chats' && !requestsOpen && (
                     <>
                         <div className={styles.folders}>

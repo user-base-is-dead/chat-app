@@ -149,7 +149,9 @@ fun ChatsScreen(
                 SearchBar("Search your chats", model::openSearch)
                 FolderPill(model.unreadChats)
                 RequestsRow(model.requests.size, onOpenRequests)
+                SyncFailure(model)
                 when {
+                    model.syncError.isNotEmpty() && model.active.isEmpty() -> Unit
                     model.loading -> Centered { CircularProgressIndicator(color = Chroma) }
                     model.failed && model.active.isEmpty() -> Centered {
                         Text("Cannot reach the server. Check your connection.", color = InkMuted, fontSize = 14.sp)
@@ -218,13 +220,21 @@ fun SearchResults(
 }
 
 @Composable
+fun SyncFailure(model: ChatsViewModel) {
+    if (model.syncError.isEmpty()) return
+    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(model.syncError, color = InkMuted)
+        androidx.compose.material3.TextButton(onClick = model::refreshNow) { Text("Retry", color = DockAccent) }
+    }
+}
+
+@Composable
 fun ScreenTitle(title: String, model: ChatsViewModel, count: Int = 0) {
     val label = model.syncLabel
     androidx.compose.ui.layout.Layout(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(54.dp),
         content = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.then(if (label.endsWith("Retry")) Modifier.clickable { model.refreshNow() } else Modifier)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(label.ifEmpty { title }, color = DockAccent, fontSize = if (label.isEmpty()) 28.sp else 20.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (count > 0 && label.isEmpty()) CountBadge(count)

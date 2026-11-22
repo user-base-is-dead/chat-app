@@ -235,7 +235,7 @@ fun ChatRow(
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (selected) Surface else Color.Transparent)
+            .background(if (selected) Ink.copy(alpha = 0.16f) else Color.Transparent)
             .drawBehind { if (pressed.value || tapFlash != 0) drawRect(pressTint) }
             .combinedClickable(
                 interactionSource = source,

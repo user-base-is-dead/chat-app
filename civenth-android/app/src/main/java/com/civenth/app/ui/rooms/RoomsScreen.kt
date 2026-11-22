@@ -75,7 +75,9 @@ fun RoomsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTitle(title, model)
         SearchBox(model.search, "Search your ${title.lowercase()}") { model.search = it }
+        com.civenth.app.ui.chats.SyncFailure(model)
         when {
+            model.syncError.isNotEmpty() && rooms.isEmpty() -> Unit
             model.search.isNotBlank() -> SearchResults(model, bottomSpace, onOpenChat, onOpenMessage, kind)
             model.loading -> Centered { CircularProgressIndicator(color = Chroma) }
             rooms.isEmpty() -> Centered {
