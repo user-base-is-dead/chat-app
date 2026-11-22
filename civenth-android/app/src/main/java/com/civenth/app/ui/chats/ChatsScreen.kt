@@ -63,6 +63,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -251,27 +253,18 @@ fun ScreenTitle(title: String, model: ChatsViewModel, count: Int = 0) {
 
 @Composable
 private fun HeaderMenu() {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(Card)
-                .border(1.dp, BubbleBorder, CircleShape)
-                .pressClickable { open = true },
-        ) {
-            Icon(painterResource(R.drawable.ic_more), "More", tint = Ink, modifier = Modifier.size(22.dp))
-        }
-        if (open) DropdownMenu(
-            expanded = true,
-            onDismissRequest = { open = false },
-            shape = RoundedCornerShape(18.dp),
-            containerColor = Panel,
-        ) {
-            Text("Coming soon", color = InkMuted, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp))
-        }
+    var center by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(44.dp)
+            .onGloballyPositioned { center = it.boundsInRoot().center }
+            .clip(CircleShape)
+            .background(Card)
+            .border(1.dp, BubbleBorder, CircleShape)
+            .pressClickable { com.civenth.app.ui.main.SideMenu.show(center) },
+    ) {
+        Icon(painterResource(R.drawable.ic_more), "More", tint = Ink, modifier = Modifier.size(22.dp))
     }
 }
 

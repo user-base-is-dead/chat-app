@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             AppRoot()
                             NotificationsPage()
+                            com.civenth.app.ui.main.MenuScreen()
                         }
                         androidx.compose.runtime.key(launchCount.intValue) { LaunchLogo() }
                     }
