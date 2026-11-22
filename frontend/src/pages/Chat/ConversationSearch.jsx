@@ -9,8 +9,6 @@ export default function ConversationSearch({ chatId, onClose, onPick }) {
     useEffect(() => {
         let active = true
         const needle = query.trim().toLowerCase()
-        setHits([])
-        setStatus(needle ? 'Searching…' : '')
         const timer = setTimeout(async () => {
             if (!needle) return
             try {
@@ -32,7 +30,7 @@ export default function ConversationSearch({ chatId, onClose, onPick }) {
         return () => { active = false; clearTimeout(timer) }
     }, [chatId, query])
     return <section className={styles.conversationSearch}>
-        <div><input autoFocus type="search" aria-label="Search this conversation" placeholder="Search this conversation" value={query} onChange={e => setQuery(e.target.value)} />
+        <div><input autoFocus type="search" aria-label="Search this conversation" placeholder="Search this conversation" value={query} onChange={e => { setQuery(e.target.value); setHits([]); setStatus(e.target.value.trim() ? 'Searching…' : '') }} />
         <button type="button" onClick={onClose}>Close</button></div>
         {hits.map(m => <button type="button" key={m.id} onClick={() => onPick(m.id)}>{m.text}</button>)}
         {status && <small role="status">{status}</small>}
