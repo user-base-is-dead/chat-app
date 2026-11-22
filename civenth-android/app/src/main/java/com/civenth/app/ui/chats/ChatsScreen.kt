@@ -228,18 +228,49 @@ fun ScreenTitle(title: String, model: ChatsViewModel, count: Int = 0) {
                 if (count > 0 && label.isEmpty()) CountBadge(count)
             }
             AppAlerts()
+            HeaderMenu()
         },
     ) { parts, limits ->
         val width = limits.maxWidth
         val height = limits.maxHeight
         val gap = 8.dp.roundToPx()
-        val alerts = parts[1].measure(limits.copy(minWidth = 0, minHeight = 0))
-        val room = (width - alerts.width - gap).coerceAtLeast(0)
-        val heading = parts[0].measure(limits.copy(minWidth = 0, minHeight = 0, maxWidth = room))
+        val loose = limits.copy(minWidth = 0, minHeight = 0)
+        val alerts = parts[1].measure(loose)
+        val menu = parts[2].measure(loose)
+        val start = menu.width + gap
+        val end = (width - alerts.width - gap).coerceAtLeast(start)
+        val heading = parts[0].measure(loose.copy(maxWidth = end - start))
         layout(width, height) {
-            val x = minOf((width - heading.width) / 2, room - heading.width).coerceAtLeast(0)
+            val x = ((width - heading.width) / 2).coerceAtMost(end - heading.width).coerceAtLeast(start)
+            menu.place(0, (height - menu.height) / 2)
             heading.place(x, (height - heading.height) / 2)
             alerts.place(width - alerts.width, (height - alerts.height) / 2)
+        }
+    }
+}
+
+@Composable
+private fun HeaderMenu() {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Card)
+                .border(1.dp, BubbleBorder, CircleShape)
+                .pressClickable { open = true },
+        ) {
+            Icon(painterResource(R.drawable.ic_more), "More", tint = Ink, modifier = Modifier.size(22.dp))
+        }
+        if (open) DropdownMenu(
+            expanded = true,
+            onDismissRequest = { open = false },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = Panel,
+        ) {
+            Text("Coming soon", color = InkMuted, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp))
         }
     }
 }
