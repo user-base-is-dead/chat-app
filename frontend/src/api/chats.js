@@ -77,8 +77,36 @@ export function editMessage(chatId, messageId, text) {
     return authorized(`/chats/${chatId}/messages/${messageId}`, { method: 'PATCH', body: { ciphertext: encodeContent(text) } })
 }
 
-export function sendMessage(chatId, text, switches) {
-    return authorized(`/chats/${chatId}/messages`, { method: 'POST', body: { ciphertext: encodeContent(text), ...switches } })
+export function sendMessage(chatId, text, switches, replyToId) {
+    const body = { ciphertext: encodeContent(text), ...switches }
+    if (replyToId) body.replyToId = replyToId
+    return authorized(`/chats/${chatId}/messages`, { method: 'POST', body })
+}
+
+export function forwardMessage(chatId, fromChatId, messageId) {
+    return authorized(`/chats/${chatId}/messages`, { method: 'POST', body: { forwardFrom: { chatId: fromChatId, messageId } } })
+}
+
+export function loadMessagesAround(chatId, messageId) {
+    const after = loadNewerMessages(chatId, messageId)
+    const before = loadMessages(chatId, (BigInt(messageId) + 1n).toString())
+    return Promise.all([before, after])
+}
+
+export function loadPinned(chatId) {
+    return authorized(`/chats/${chatId}/pinned`)
+}
+
+export function pinMessage(chatId, messageId) {
+    return authorized(`/chats/${chatId}/pinned`, { method: 'PUT', body: { messageId } })
+}
+
+export function unpinMessage(chatId) {
+    return authorized(`/chats/${chatId}/pinned`, { method: 'DELETE' })
+}
+
+export function loadPlace(chatId) {
+    return authorized(`/chats/${chatId}/place`)
 }
 
 export function deleteMessage(chatId, messageId) {

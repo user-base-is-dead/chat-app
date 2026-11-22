@@ -18,7 +18,7 @@ drogon::Task<std::vector<Message>> MessageRepository::list(int64_t chatId, int64
     std::vector<Message> messages;
     messages.reserve(result.size());
     for (const auto &row : result)
-        messages.push_back(messageFromRow(row));
+        messages.push_back(fullMessageFromRow(row));
     std::reverse(messages.begin(), messages.end());
     co_return messages;
 }
@@ -34,7 +34,7 @@ drogon::Task<std::vector<Message>> MessageRepository::listAfter(int64_t chatId, 
     std::vector<Message> messages;
     messages.reserve(result.size());
     for (const auto &row : result)
-        messages.push_back(messageFromRow(row));
+        messages.push_back(fullMessageFromRow(row));
     co_return messages;
 }
 
@@ -44,11 +44,14 @@ drogon::Task<Message> MessageRepository::insert(int64_t id,
                                                 int64_t deviceId,
                                                 std::string ciphertext,
                                                 bool allowReactions,
-                                                bool allowComments)
+                                                bool allowComments,
+                                                Extras extras)
 {
     const auto result = co_await core::database::client()->execSqlCoro(
-        std::string("INSERT INTO messages (id, chat_id, sender_id, sender_device_id, ciphertext, allow_reactions, allow_comments) "
-                    "VALUES ($1, $2, $3, $4, decode($5, 'base64'), $6, $7) RETURNING ") +
+        std::string("INSERT INTO messages (id, chat_id, sender_id, sender_device_id, ciphertext, allow_reactions, allow_comments, "
+                    "reply_to_id, forwarded_from_id, forwarded_from_chat_id) "
+                    "VALUES ($1, $2, $3, $4, decode($5, 'base64'), $6, $7, NULLIF($8::bigint, 0), NULLIF($9::bigint, 0), "
+                    "NULLIF($10::bigint, 0)) RETURNING ") +
             kMessageColumns,
         id,
         chatId,
@@ -56,8 +59,11 @@ drogon::Task<Message> MessageRepository::insert(int64_t id,
         deviceId,
         ciphertext,
         allowReactions,
-        allowComments);
-    co_return messageFromRow(result[0]);
+        allowComments,
+        extras.replyToId,
+        extras.forwardedFromId,
+        extras.forwardedFromChatId);
+    co_return fullMessageFromRow(result[0]);
 }
 
 drogon::Task<std::optional<Message>> MessageRepository::edit(int64_t chatId,
@@ -75,7 +81,40 @@ drogon::Task<std::optional<Message>> MessageRepository::edit(int64_t chatId,
         ciphertext);
     if (result.empty())
         co_return std::nullopt;
-    co_return messageFromRow(result[0]);
+    co_return fullMessageFromRow(result[0]);
+}
+
+drogon::Task<std::optional<Message>> MessageRepository::find(int64_t chatId, int64_t id)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        std::string("SELECT ") + kMessageColumns + " FROM messages WHERE chat_id = $1 AND id = $2", chatId, id);
+    if (result.empty())
+        co_return std::nullopt;
+    co_return fullMessageFromRow(result[0]);
+}
+
+drogon::Task<bool> MessageRepository::exists(int64_t chatId, int64_t id)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        "SELECT 1 FROM messages WHERE chat_id = $1 AND id = $2", chatId, id);
+    co_return !result.empty();
+}
+
+drogon::Task<std::optional<Message>> MessageRepository::pinned(int64_t chatId)
+{
+    const auto result = co_await core::database::client()->execSqlCoro(
+        std::string("SELECT ") + kMessageColumns +
+            " FROM messages WHERE chat_id = $1 AND id = (SELECT pinned_message_id FROM chats WHERE id = $1)",
+        chatId);
+    if (result.empty())
+        co_return std::nullopt;
+    co_return fullMessageFromRow(result[0]);
+}
+
+drogon::Task<> MessageRepository::setPinned(int64_t chatId, int64_t messageId)
+{
+    co_await core::database::client()->execSqlCoro(
+        "UPDATE chats SET pinned_message_id = NULLIF($2::bigint, 0) WHERE id = $1", chatId, messageId);
 }
 
 drogon::Task<bool> MessageRepository::remove(int64_t chatId, int64_t id)

@@ -65,6 +65,11 @@ void requireViewer(const RoomAccess &room)
     if (room.kind == "group" && !room.canInChannel("viewChannel"))
         throw roomNotFound();
 }
+
+bool canManageMessages(const RoomAccess &room)
+{
+    return room.kind == "group" ? room.canInChannel("deleteMessages") : authorityOf(room).has("deleteMessages");
+}
 }
 
 void hideSender(Json::Value &message)
@@ -440,14 +445,17 @@ drogon::Task<messages::Message> RoomService::send(int64_t chatId,
                                                   int64_t deviceId,
                                                   std::string ciphertext,
                                                   bool allowReactions,
-                                                  bool allowComments)
+                                                  bool allowComments,
+                                                  messages::Extras extras)
 {
     requireViewer(room);
     const bool allowed = room.kind == "group" ? room.canInChannel("sendMessages") : canSend(room.kind, authorityOf(room), room.membersCanSend);
     if (!allowed)
         throw ApiError(drogon::k403Forbidden, "cannot_send", "You cannot send messages here");
+    if (extras.replyToId && (room.kind == "channel" || !co_await messages_.exists(chatId, extras.replyToId)))
+        throw ApiError(drogon::k400BadRequest, "reply_not_found", "The message you are replying to is gone");
     auto message = co_await messages_.insert(
-        core::id::next(), chatId, userId, deviceId, ciphertext, allowReactions, allowComments);
+        core::id::next(), chatId, userId, deviceId, ciphertext, allowReactions, allowComments, extras);
     if (room.roomId != chatId)
         co_await rooms_.markChannelRead(chatId, userId, message.id);
     else
@@ -478,6 +486,28 @@ drogon::Task<messages::Message> RoomService::edit(int64_t chatId,
     co_return *message;
 }
 
+drogon::Task<messages::Message> RoomService::pinMessage(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId)
+{
+    requireViewer(room);
+    if (!canManageMessages(room))
+        throw notAllowed();
+    const auto message = co_await messages_.find(chatId, messageId);
+    if (!message)
+        throw ApiError(drogon::k404NotFound, "message_not_found", "Message not found");
+    co_await messages_.setPinned(chatId, messageId);
+    co_await announcePin(chatId, room, message);
+    co_return *message;
+}
+
+drogon::Task<> RoomService::unpinMessage(int64_t chatId, RoomAccess room, int64_t userId)
+{
+    requireViewer(room);
+    if (!canManageMessages(room))
+        throw notAllowed();
+    co_await messages_.setPinned(chatId, 0);
+    co_await announcePin(chatId, room, std::nullopt);
+}
+
 drogon::Task<> RoomService::deleteMessage(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId)
 {
     requireViewer(room);
@@ -487,8 +517,7 @@ drogon::Task<> RoomService::deleteMessage(int64_t chatId, RoomAccess room, int64
     if (*sender != userId)
     {
         const auto authority = authorityOf(room);
-        const bool allowed = room.kind == "group" ? room.canInChannel("deleteMessages") : authority.has("deleteMessages");
-        if (!allowed)
+        if (!canManageMessages(room))
             throw notAllowed();
         if (room.kind == "group" && !authority.owner && co_await rooms_.memberRole(room.roomId, *sender) == "owner")
             throw notAllowed();
@@ -530,6 +559,20 @@ drogon::Task<> RoomService::broadcast(int64_t chatId, std::string event, Json::V
     const auto ids = co_await rooms_.viewerIds(roomId, chatId);
     for (const auto id : ids)
         realtime::hub().send(id, event, data);
+}
+
+drogon::Task<> RoomService::announcePin(int64_t chatId, const RoomAccess &room, const std::optional<messages::Message> &message)
+{
+    auto data = chatEvent(chatId);
+    data["message"] = Json::Value();
+    if (message)
+    {
+        auto json = messages::toJson(*message);
+        if (room.kind == "channel")
+            hideSender(json);
+        data["message"] = json;
+    }
+    co_await broadcast(chatId, "message.pinned", data);
 }
 
 drogon::Task<> RoomService::broadcastPost(int64_t chatId, int64_t senderId, std::string event, Json::Value data)

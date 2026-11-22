@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,12 @@
 
 namespace features::chats
 {
+struct Forwarded
+{
+    std::string ciphertext;
+    messages::Extras extras;
+};
+
 Json::Value toJson(const ChatSummary &chat);
 drogon::Task<> notifyPeersChanged(int64_t userId);
 void notifyChatsChanged(const std::vector<DmLink> &links);
@@ -38,7 +45,13 @@ class ChatService
                                          int64_t deviceId,
                                          std::string ciphertext,
                                          bool allowReactions = true,
-                                         bool allowComments = true);
+                                         bool allowComments = true,
+                                         messages::Extras extras = {});
+    drogon::Task<Forwarded> forwardFrom(int64_t sourceChatId, int64_t userId, int64_t messageId);
+    drogon::Task<std::optional<messages::Message>> pinned(int64_t chatId, int64_t userId);
+    drogon::Task<messages::Message> pinMessage(int64_t chatId, int64_t userId, int64_t messageId);
+    drogon::Task<> unpinMessage(int64_t chatId, int64_t userId);
+    drogon::Task<Json::Value> place(int64_t chatId, int64_t userId);
     drogon::Task<bool> isChannel(int64_t chatId, int64_t userId);
     drogon::Task<messages::Message> edit(int64_t chatId, int64_t userId, int64_t messageId, std::string ciphertext);
     drogon::Task<bool> deleteMessage(int64_t chatId, int64_t userId, int64_t messageId);

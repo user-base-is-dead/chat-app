@@ -28,6 +28,10 @@
     justify-content: center;
 }
 
+.replied .side {
+    padding-top: 23px;
+}
+
 .sideTime {
     display: none;
     align-items: center;

@@ -7,6 +7,7 @@ import DoubleTickIcon from '../Icons/DoubleTickIcon'
 import ClockIcon from '../Icons/ClockIcon'
 import FailedIcon from '../Icons/FailedIcon'
 import { messageMenuItems } from '../MessageBubble/messageMenu'
+import { Edited, Forwarded, ReplyQuote } from '../MessageExtras/MessageExtras'
 import { roleColor } from '../../utils/roles'
 import { dateTime } from '../../utils/dayLabel'
 
@@ -21,12 +22,12 @@ function Tick({ status }) {
     )
 }
 
-function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, nameColor, canDeleteOthers, selecting, selected, onSelect, onResend, onDelete }) {
+function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, nameColor, replyColor, canDeleteOthers, actions, selecting, selected, onSelect, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
     const name = message.mine ? selfName : message.senderName || peerName || 'Deleted Account'
     const pending = message.mine && (message.status === 'sending' || message.status === 'failed')
     const tick = pending ? <Tick status={message.status} /> : null
-    const classes = [styles.row, start && styles.start, focused && styles.focused, selecting && styles.selecting, selected && styles.selected].filter(Boolean).join(' ')
+    const classes = [styles.row, start && styles.start, message.replyTo && styles.replied, focused && styles.focused, selecting && styles.selecting, selected && styles.selected].filter(Boolean).join(' ')
 
     const openMenu = (e) => {
         e.preventDefault()
@@ -45,6 +46,7 @@ function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, 
                 )}
             </span>
             <span className={styles.body}>
+                {message.replyTo && <ReplyQuote reply={message.replyTo} nameColor={replyColor ? roleColor(replyColor) : null} onOpen={actions?.openReply} />}
                 {start && (
                     <span className={styles.head}>
                         <span className={styles.name} style={nameColor ? { color: roleColor(nameColor) } : undefined}>{name}</span>
@@ -52,8 +54,10 @@ function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, 
                         {tick}
                     </span>
                 )}
+                {message.forwardedFrom && <Forwarded name={message.forwardedFrom.name} />}
                 <span className={styles.text}>
                     {message.text}
+                    {message.editedAt && <Edited />}
                     {!start && tick && <span className={styles.inlineTick}>{tick}</span>}
                 </span>
             </span>
@@ -62,7 +66,7 @@ function GroupMessage({ message, start, focused, selfName, peerName, peerPhoto, 
                     x={menu.x}
                     y={menu.y}
                     title={message.status === 'failed' ? 'Message not sent' : null}
-                    items={messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })}
+                    items={messageMenuItems({ message, canDeleteOthers, actions, onResend, onDelete, onSelect })}
                     onClose={() => setMenu(null)}
                 />
             )}

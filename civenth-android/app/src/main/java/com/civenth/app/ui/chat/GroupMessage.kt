@@ -147,17 +147,17 @@ fun GroupMessage(
     start: Boolean,
     focused: Boolean,
     selfName: String,
+    actions: () -> List<MessageAction>,
     selfPhoto: String = "",
     peerName: String = "",
     peerPhoto: String = "",
     nameColor: String? = null,
-    canDelete: Boolean,
+    replyColor: String? = null,
     selecting: Boolean = false,
     selected: Boolean = false,
     onSelect: () -> Unit = {},
-    onCopy: () -> Unit,
-    onResend: () -> Unit,
-    onDelete: () -> Unit,
+    onSwipeReply: (() -> Unit)? = null,
+    onOpenReply: (String) -> Unit = {},
     askMenu: Boolean = false,
     onMenuAsked: () -> Unit = {},
 ) {
@@ -184,120 +184,99 @@ fun GroupMessage(
     val failed = mine && message.state == SendState.Failed
     val faded by animateFloatAsState(if (mine && message.state != SendState.Sent) 0.45f else 1f, tween(220), label = "faded")
     val time = remember(message.createdAt) { formatDateTime(message.createdAt) }
+    val body = withEdited(message.text, message.editedAt != null, InkMuted)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = if (start) 17.dp else 0.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    when {
-                        focused -> Chroma.copy(alpha = 0.18f)
-                        else -> Color.Transparent
-                    },
-                )
-                .drawBehind {
-                    if (shadow.value > 0f) drawRect(shadowColor.copy(alpha = shadow.value))
-                }
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                    when {
-                        selecting -> onSelect()
-                        message.state == SendState.Failed -> menuOpen = true
-                        else -> flash++
-                    }
-                }
-                .padding(horizontal = 8.dp, vertical = 1.dp),
-        ) {
-            Box(
-                contentAlignment = Alignment.TopCenter,
+        SwipeReply(enabled = onSwipeReply != null && !selecting, onReply = { onSwipeReply?.invoke() }) {
+            Column(
                 modifier = Modifier
-                    .width(40.dp)
-                    .height(if (start) 40.dp else 24.dp),
+                    .fillMaxWidth()
+                    .background(if (focused) Chroma.copy(alpha = 0.18f) else Color.Transparent)
+                    .drawBehind {
+                        if (shadow.value > 0f) drawRect(shadowColor.copy(alpha = shadow.value))
+                    }
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        if (selecting) onSelect()
+                        else {
+                            flash++
+                            menuOpen = true
+                        }
+                    },
             ) {
-                if (start) {
-                    Box(modifier = Modifier.graphicsLayer { alpha = 1f - picking }) {
-                        Avatar(name, 40.dp, photo = photo)
-                    }
+                message.replyTo?.let { reply ->
+                    ReplyQuote(reply, roleColor(replyColor) ?: Ink) { onOpenReply(reply.id) }
                 }
-                if (picking > 0f) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 1.dp),
+                ) {
                     Box(
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.TopCenter,
                         modifier = Modifier
-                            .padding(top = if (start) 9.dp else 0.dp)
-                            .size(24.dp)
-                            .graphicsLayer { alpha = picking }
-                            .clip(CircleShape)
-                            .background(Chroma.copy(alpha = mark))
-                            .border(1.6.dp, lerp(InkMuted, Chroma, mark), CircleShape),
+                            .width(40.dp)
+                            .height(if (start) 40.dp else 24.dp),
                     ) {
-                        Icon(painterResource(R.drawable.ic_tick), null, tint = Color.White, modifier = Modifier.size(15.dp).graphicsLayer { alpha = mark; scaleX = 0.8f + 0.2f * mark; scaleY = scaleX })
+                        if (start) {
+                            Box(modifier = Modifier.graphicsLayer { alpha = 1f - picking }) {
+                                Avatar(name, 40.dp, photo = photo)
+                            }
+                        }
+                        if (picking > 0f) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .padding(top = if (start) 9.dp else 0.dp)
+                                    .size(24.dp)
+                                    .graphicsLayer { alpha = picking }
+                                    .clip(CircleShape)
+                                    .background(Chroma.copy(alpha = mark))
+                                    .border(1.6.dp, lerp(InkMuted, Chroma, mark), CircleShape),
+                            ) {
+                                Icon(painterResource(R.drawable.ic_tick), null, tint = Color.White, modifier = Modifier.size(15.dp).graphicsLayer { alpha = mark; scaleX = 0.8f + 0.2f * mark; scaleY = scaleX })
+                            }
+                        }
                     }
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                if (start) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = name,
-                            color = roleColor(nameColor) ?: Ink,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        Text(text = time, color = InkMuted, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (start) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = name,
+                                    color = roleColor(nameColor) ?: Ink,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                Text(text = time, color = InkMuted, fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
+                        message.forwardedFrom?.let { ForwardedLabel(it.name) }
+                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = body,
+                                color = Ink.copy(alpha = faded),
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Normal,
+                                lineHeight = 26.sp,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            if (failed) Box(modifier = Modifier.padding(bottom = 2.dp)) { FailedMark { menuOpen = true } }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = message.text,
-                        color = Ink.copy(alpha = faded),
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Normal,
-                        lineHeight = 26.sp,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (failed) Box(modifier = Modifier.padding(bottom = 2.dp)) { FailedMark { menuOpen = true } }
                 }
             }
         }
-        if (menuOpen && !selecting && message.state == SendState.Failed) DropdownMenu(
-            expanded = true,
-            onDismissRequest = { menuOpen = false },
-            shape = RoundedCornerShape(18.dp),
-            containerColor = Panel,
-        ) {
-            if (message.state == SendState.Failed) {
-                Text(
-                    text = "Message not sent",
-                    color = InkMuted,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
-            when (message.state) {
-                SendState.Failed -> MenuItem("Resend") {
-                    menuOpen = false
-                    onResend()
-                }
-                SendState.Sending -> Unit
-                SendState.Sent -> MenuItem("Copy") {
-                    menuOpen = false
-                    onCopy()
-                }
-            }
-            if (message.mine || canDelete) {
-                MenuItem(if (message.state == SendState.Sending) "Cancel Sending" else "Delete", danger = true) {
-                    menuOpen = false
-                    onDelete()
-                }
-            }
+        if (menuOpen && !selecting) {
+            val list = actions()
+            if (list.isNotEmpty()) ActionMenu(list, title = if (failed) "Message not sent" else null) { menuOpen = false }
         }
     }
 }

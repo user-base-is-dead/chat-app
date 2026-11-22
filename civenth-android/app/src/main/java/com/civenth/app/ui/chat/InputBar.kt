@@ -113,12 +113,19 @@ fun InputBar(
     onAttach: () -> Unit,
     placeholder: String = "Message",
     clearKey: Int = 0,
+    strip: (@Composable () -> Unit)? = null,
+    draft: InputDraft? = null,
 ) {
     var value by remember { mutableStateOf(TextFieldValue("")) }
     var clearedKey by remember { mutableStateOf(clearKey) }
     if (clearedKey != clearKey) {
         clearedKey = clearKey
         value = TextFieldValue("")
+    }
+    var draftKey by remember { mutableStateOf(draft?.key) }
+    if (draft != null && draftKey != draft.key) {
+        draftKey = draft.key
+        value = TextFieldValue(draft.text, TextRange(draft.text.length))
     }
     var emojiOpen by remember { mutableStateOf(false) }
     var emojiSearching by remember { mutableStateOf(false) }
@@ -180,8 +187,7 @@ fun InputBar(
     }
 
     Column {
-        Row(
-            verticalAlignment = Alignment.Bottom,
+        Column(
             modifier = Modifier
                 .padding(start = 8.dp, end = 8.dp, bottom = 6.dp)
                 .fillMaxWidth()
@@ -190,6 +196,11 @@ fun InputBar(
                 .background(Panel)
                 .border(1.dp, BorderStrong, BarShape)
                 .padding(4.dp),
+        ) {
+        strip?.invoke()
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             BarButton(R.drawable.ic_attach, "Attach", active = false, onClick = onAttach)
             Box(
@@ -267,6 +278,7 @@ fun InputBar(
                 )
             }
         }
+        }
         if (emojiOpen || keyboardRising) {
             val searching = emojiSearching && keyboardHeight > 0.dp
             val full = if (searching) PanelWithKeyboard else panelHeight
@@ -291,6 +303,8 @@ fun InputBar(
         }
     }
 }
+
+data class InputDraft(val text: String, val key: Int)
 
 @Composable
 private fun BarButton(icon: Int, label: String, active: Boolean, onClick: () -> Unit) {

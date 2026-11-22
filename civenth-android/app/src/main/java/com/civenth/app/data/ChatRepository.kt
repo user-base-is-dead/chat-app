@@ -44,6 +44,20 @@ data class Chat(
     val isRoom: Boolean get() = kind.isNotEmpty()
 }
 
+data class ReplyRef(
+    val id: String,
+    val senderId: String,
+    val senderName: String,
+    val text: String,
+    val deleted: Boolean,
+)
+
+data class ForwardRef(
+    val kind: String,
+    val id: String,
+    val name: String,
+)
+
 data class ServerMessage(
     val id: String,
     val chatId: String,
@@ -51,6 +65,9 @@ data class ServerMessage(
     val senderName: String,
     val text: String,
     val createdAt: Long,
+    val editedAt: Long? = null,
+    val replyTo: ReplyRef? = null,
+    val forwardedFrom: ForwardRef? = null,
 )
 
 data class Person(
@@ -90,10 +107,11 @@ class ChatRepository(private val api: ApiClient) {
     suspend fun messagesAfter(chatId: String, afterId: Long): List<ServerMessage> =
         messages("/chats/$chatId/messages?limit=$MESSAGE_PAGE_SIZE&after=$afterId")
 
-    suspend fun send(chatId: String, text: String, switches: PostSwitches? = null): ServerMessage {
+    suspend fun send(chatId: String, text: String, switches: PostSwitches? = null, replyToId: String? = null): ServerMessage {
         val content = Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP)
         val body = JSONObject().put("ciphertext", content)
         if (switches != null) body.put("allowReactions", switches.allowReactions).put("allowComments", switches.allowComments)
+        if (replyToId != null) body.put("replyToId", replyToId)
         val saved = api.authorized("/chats/$chatId/messages", "POST", body)
             ?: throw ApiError(0, "unknown", "Something went wrong")
         return toMessage(saved)
@@ -104,6 +122,23 @@ class ChatRepository(private val api: ApiClient) {
         val saved = api.authorized("/chats/$chatId/messages/$messageId", "PATCH", JSONObject().put("ciphertext", content))
             ?: throw ApiError(0, "unknown", "Something went wrong")
         return toMessage(saved)
+    }
+
+    suspend fun forward(chatId: String, fromChatId: String, messageId: String): ServerMessage {
+        val body = JSONObject().put("forwardFrom", JSONObject().put("chatId", fromChatId).put("messageId", messageId))
+        val saved = api.authorized("/chats/$chatId/messages", "POST", body)
+            ?: throw ApiError(0, "unknown", "Something went wrong")
+        return toMessage(saved)
+    }
+
+    suspend fun pinned(chatId: String): ServerMessage? =
+        api.authorized("/chats/$chatId/pinned")?.optJSONObject("message")?.let(::toMessage)
+
+    suspend fun pin(chatId: String, messageId: String): ServerMessage? =
+        api.authorized("/chats/$chatId/pinned", "PUT", JSONObject().put("messageId", messageId))?.optJSONObject("message")?.let(::toMessage)
+
+    suspend fun unpin(chatId: String) {
+        api.authorized("/chats/$chatId/pinned", "DELETE")
     }
 
     suspend fun deleteMessage(chatId: String, messageId: String): Boolean =
@@ -144,6 +179,19 @@ class ChatRepository(private val api: ApiClient) {
         senderName = message.optString("senderName"),
         text = messageText(message),
         createdAt = message.optLong("createdAt"),
+        editedAt = if (message.isNull("editedAt")) null else message.optLong("editedAt"),
+        replyTo = message.optJSONObject("replyTo")?.let { reply ->
+            ReplyRef(
+                id = reply.optString("id"),
+                senderId = if (reply.isNull("senderId")) "" else reply.optString("senderId"),
+                senderName = reply.optString("senderName"),
+                text = messageText(reply),
+                deleted = reply.optBoolean("deleted"),
+            )
+        },
+        forwardedFrom = message.optJSONObject("forwardedFrom")?.let { from ->
+            ForwardRef(from.optString("kind"), from.optString("id"), from.optString("name"))
+        },
     )
 
     fun toRoom(room: JSONObject): Chat {

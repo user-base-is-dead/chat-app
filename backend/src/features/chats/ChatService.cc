@@ -20,6 +20,19 @@ ApiError chatNotFound()
     return ApiError(drogon::k404NotFound, "chat_not_found", "Chat not found");
 }
 
+ApiError messageNotFound()
+{
+    return ApiError(drogon::k404NotFound, "message_not_found", "Message not found");
+}
+
+Json::Value pinEvent(int64_t chatId, const std::optional<messages::Message> &message)
+{
+    Json::Value data;
+    data["chatId"] = std::to_string(chatId);
+    data["message"] = message ? messages::toJson(*message) : Json::Value();
+    return data;
+}
+
 bool isBase64(const std::string &value)
 {
     size_t padding = 0;
@@ -235,11 +248,12 @@ drogon::Task<messages::Message> ChatService::send(int64_t chatId,
                                                   int64_t deviceId,
                                                   std::string ciphertext,
                                                   bool allowReactions,
-                                                  bool allowComments)
+                                                  bool allowComments,
+                                                  messages::Extras extras)
 {
     validateCiphertext(ciphertext);
     if (const auto room = co_await roomAccess_.access(chatId, userId))
-        co_return co_await rooms_.send(chatId, *room, userId, deviceId, ciphertext, allowReactions, allowComments);
+        co_return co_await rooms_.send(chatId, *room, userId, deviceId, ciphertext, allowReactions, allowComments, extras);
     const auto member = co_await requireMember(chatId, userId);
     if (member.status == "request")
         throw ApiError(drogon::k403Forbidden, "accept_first", "Accept the message request before replying");
@@ -251,8 +265,11 @@ drogon::Task<messages::Message> ChatService::send(int64_t chatId,
     if (peer->disabled)
         throw ApiError(drogon::k403Forbidden, "peer_disabled", "This account is disabled");
 
+    if (extras.replyToId && !co_await messages_.exists(chatId, extras.replyToId))
+        throw ApiError(drogon::k400BadRequest, "reply_not_found", "The message you are replying to is gone");
+
     co_await chats_.addRecipient(chatId, member.peerId);
-    auto message = co_await messages_.insert(core::id::next(), chatId, userId, deviceId, ciphertext);
+    auto message = co_await messages_.insert(core::id::next(), chatId, userId, deviceId, ciphertext, true, true, extras);
     co_await chats_.markRead(chatId, userId, message.id);
     notifyBoth(userId, member.peerId, "message.new", messages::toJson(message));
     co_return message;
@@ -310,6 +327,73 @@ drogon::Task<> ChatService::markRead(int64_t chatId, int64_t userId, int64_t mes
     notifyReadUpTo(chatId, userId, messageId, userId);
     if (member.status == "active")
         notifyReadUpTo(chatId, userId, messageId, member.peerId);
+}
+
+drogon::Task<Forwarded> ChatService::forwardFrom(int64_t sourceChatId, int64_t userId, int64_t messageId)
+{
+    co_await requireReadable(sourceChatId, userId);
+    const auto source = co_await messages_.find(sourceChatId, messageId);
+    if (!source || !source->ciphertext)
+        throw messageNotFound();
+    Forwarded forwarded{*source->ciphertext, {}};
+    if (source->forwardedFrom)
+    {
+        if (source->forwardedFrom->kind == "channel")
+            forwarded.extras.forwardedFromChatId = source->forwardedFrom->id;
+        else
+            forwarded.extras.forwardedFromId = source->forwardedFrom->id;
+    }
+    else if (co_await isChannel(sourceChatId, userId))
+        forwarded.extras.forwardedFromChatId = sourceChatId;
+    else
+        forwarded.extras.forwardedFromId = source->senderId;
+    co_return forwarded;
+}
+
+drogon::Task<std::optional<messages::Message>> ChatService::pinned(int64_t chatId, int64_t userId)
+{
+    co_await requireReadable(chatId, userId);
+    co_return co_await messages_.pinned(chatId);
+}
+
+drogon::Task<messages::Message> ChatService::pinMessage(int64_t chatId, int64_t userId, int64_t messageId)
+{
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+        co_return co_await rooms_.pinMessage(chatId, *room, userId, messageId);
+    const auto member = co_await requireMember(chatId, userId);
+    const auto message = co_await messages_.find(chatId, messageId);
+    if (!message)
+        throw messageNotFound();
+    co_await messages_.setPinned(chatId, messageId);
+    notifyBoth(userId, member.peerId, "message.pinned", pinEvent(chatId, message));
+    co_return *message;
+}
+
+drogon::Task<> ChatService::unpinMessage(int64_t chatId, int64_t userId)
+{
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+    {
+        co_await rooms_.unpinMessage(chatId, *room, userId);
+        co_return;
+    }
+    const auto member = co_await requireMember(chatId, userId);
+    co_await messages_.setPinned(chatId, 0);
+    notifyBoth(userId, member.peerId, "message.pinned", pinEvent(chatId, std::nullopt));
+}
+
+drogon::Task<Json::Value> ChatService::place(int64_t chatId, int64_t userId)
+{
+    co_await requireReadable(chatId, userId);
+    Json::Value body;
+    body["chatId"] = std::to_string(chatId);
+    if (const auto room = co_await roomAccess_.access(chatId, userId))
+    {
+        body["kind"] = room->kind == "group" ? "text" : "channel";
+        body["roomId"] = std::to_string(room->roomId);
+    }
+    else
+        body["kind"] = "dm";
+    co_return body;
 }
 
 drogon::Task<bool> ChatService::isChannel(int64_t chatId, int64_t userId)

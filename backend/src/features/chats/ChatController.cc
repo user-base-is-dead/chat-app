@@ -184,12 +184,28 @@ drogon::Task<drogon::HttpResponsePtr> ChatController::send(drogon::HttpRequestPt
     try
     {
         const auto &body = requireJson(request);
+        const auto userId = currentUserId(request);
+        Forwarded content;
+        if (body.isMember("forwardFrom"))
+        {
+            const auto &from = body["forwardFrom"];
+            if (!from.isObject())
+                throw ApiError(drogon::k400BadRequest, "invalid_forward", "forwardFrom must be an object");
+            content = co_await service_.forwardFrom(parseId(stringField(from, "chatId"), "chatId"),
+                                                    userId,
+                                                    parseId(stringField(from, "messageId"), "messageId"));
+        }
+        else
+            content.ciphertext = stringField(body, "ciphertext");
+        if (body["replyToId"].isString())
+            content.extras.replyToId = parseId(body["replyToId"].asString(), "replyToId");
         auto message = co_await service_.send(parseId(chatId, "chatId"),
-                                              currentUserId(request),
+                                              userId,
                                               currentDeviceId(request),
-                                              stringField(body, "ciphertext"),
+                                              content.ciphertext,
                                               !body["allowReactions"].isBool() || body["allowReactions"].asBool(),
-                                              !body["allowComments"].isBool() || body["allowComments"].asBool());
+                                              !body["allowComments"].isBool() || body["allowComments"].asBool(),
+                                              content.extras);
         co_return jsonResponse(messages::toJson(message), drogon::k201Created);
     }
     catch (const ApiError &error)
@@ -242,6 +258,77 @@ drogon::Task<drogon::HttpResponsePtr> ChatController::markRead(drogon::HttpReque
         co_await service_.markRead(
             parseId(chatId, "chatId"), currentUserId(request), parseId(stringField(body, "messageId"), "messageId"));
         co_return drogon::HttpResponse::newHttpResponse(drogon::k204NoContent, drogon::CT_NONE);
+    }
+    catch (const ApiError &error)
+    {
+        co_return errorResponse(error);
+    }
+}
+
+drogon::Task<drogon::HttpResponsePtr> ChatController::pinned(drogon::HttpRequestPtr request, std::string chatId)
+{
+    try
+    {
+        const auto id = parseId(chatId, "chatId");
+        const auto userId = currentUserId(request);
+        const auto message = co_await service_.pinned(id, userId);
+        Json::Value body;
+        body["message"] = Json::Value();
+        if (message)
+        {
+            auto json = messages::toJson(*message);
+            if (message->senderId != userId && co_await service_.isChannel(id, userId))
+                rooms::hideSender(json);
+            body["message"] = json;
+        }
+        co_return jsonResponse(body);
+    }
+    catch (const ApiError &error)
+    {
+        co_return errorResponse(error);
+    }
+}
+
+drogon::Task<drogon::HttpResponsePtr> ChatController::pinMessage(drogon::HttpRequestPtr request, std::string chatId)
+{
+    try
+    {
+        const auto &body = requireJson(request);
+        const auto id = parseId(chatId, "chatId");
+        const auto userId = currentUserId(request);
+        const auto message =
+            co_await service_.pinMessage(id, userId, parseId(stringField(body, "messageId"), "messageId"));
+        auto json = messages::toJson(message);
+        if (message.senderId != userId && co_await service_.isChannel(id, userId))
+            rooms::hideSender(json);
+        Json::Value reply;
+        reply["message"] = json;
+        co_return jsonResponse(reply);
+    }
+    catch (const ApiError &error)
+    {
+        co_return errorResponse(error);
+    }
+}
+
+drogon::Task<drogon::HttpResponsePtr> ChatController::unpinMessage(drogon::HttpRequestPtr request, std::string chatId)
+{
+    try
+    {
+        co_await service_.unpinMessage(parseId(chatId, "chatId"), currentUserId(request));
+        co_return drogon::HttpResponse::newHttpResponse(drogon::k204NoContent, drogon::CT_NONE);
+    }
+    catch (const ApiError &error)
+    {
+        co_return errorResponse(error);
+    }
+}
+
+drogon::Task<drogon::HttpResponsePtr> ChatController::place(drogon::HttpRequestPtr request, std::string chatId)
+{
+    try
+    {
+        co_return jsonResponse(co_await service_.place(parseId(chatId, "chatId"), currentUserId(request)));
     }
     catch (const ApiError &error)
     {

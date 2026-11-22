@@ -3,6 +3,7 @@ import CloseIcon from '../Icons/CloseIcon'
 import styles from './MessageList.module.css'
 import MessageBubble from '../MessageBubble/MessageBubble'
 import GroupMessage from '../GroupMessage/GroupMessage'
+import PinnedBar from '../PinnedBar/PinnedBar'
 import { dayKey, dayLabel } from '../../utils/dayLabel'
 import MessageSkeleton from '../Skeleton/MessageSkeleton'
 import Spinner from '../Spinner/Spinner'
@@ -13,7 +14,7 @@ const LOAD_OLDER_OFFSET = 120
 const JUMP_SHOW_OFFSET = 200
 const SEEN_EDGE = 16
 
-function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId, showSenders, hideTicks, canDeleteOthers = true, channel, postStats, canManagePosts, onReact, onOpenComments, onToggleSwitch, onEditPost, onDeleteMany, flat, selfName, peerName, peerPhoto, nameColors, ownerId }) {
+function MessageList({ header, messages, loading, hasMore, loadingOlder, hasNewer, loadingNewer, unreadFromId, unreadCount, onLoadOlder, onLoadNewer, onJumpToLatest, onSeen, onResend, onDelete, focusId, showSenders, hideTicks, canDeleteOthers = true, channel, postStats, canManagePosts, onReact, onOpenComments, onToggleSwitch, onEditPost, onDeleteMany, flat, selfName, peerName, peerPhoto, nameColors, ownerId, actions, pinned, canUnpin, onOpenPinned, onUnpin }) {
     const sameSide = (a, b) => (channel ? true : showSenders ? a.senderId === b.senderId : a.mine === b.mine)
     const RUN_GAP = 5 * 60 * 1000
     const joins = (a, b) => Boolean(a && b) && (a.mine ? b.mine : !b.mine && a.senderId === b.senderId)
@@ -129,6 +130,11 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
         onDeleteMany?.(chosen.map((m) => m.id))
         clearSelection()
     }
+    const sentChosen = chosen.filter((m) => !m.status || m.status === 'sent' || m.status === 'read')
+    const forwardChosen = () => {
+        actions?.forward?.(sentChosen)
+        clearSelection()
+    }
 
     const reportSeen = () => {
         const list = listRef.current
@@ -208,19 +214,22 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
     }
 
     return (
-        <div className={styles.wrap}>
-            {selecting && (
+        <>
+            {selecting ? (
                 <div className={styles.selectBar}>
                     <button className={styles.selectClose} type="button" aria-label="Cancel selection" onClick={clearSelection}>
                         <CloseIcon />
                     </button>
                     <span className={styles.selectCount} key={chosen.length}>{chosen.length === 1 ? '1 selected' : `${chosen.length} selected`}</span>
                     <button className={styles.selectAction} type="button" onClick={copyChosen}>Copy</button>
+                    {actions?.forward && sentChosen.length > 0 && <button className={styles.selectAction} type="button" onClick={forwardChosen}>Forward</button>}
                     {chosen.length > 0 && chosen.every(canDelete) && (
                         <button className={`${styles.selectAction} ${styles.selectDanger}`} type="button" onClick={deleteChosen}>Delete</button>
                     )}
                 </div>
-            )}
+            ) : header}
+            {pinned && <PinnedBar message={pinned} canUnpin={canUnpin} onOpen={() => onOpenPinned(pinned.id)} onUnpin={() => onUnpin(pinned)} />}
+            <div className={styles.wrap}>
             {loadingOlder && (
                 <div className={styles.older}>
                     <Spinner size={18} />
@@ -246,13 +255,15 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
                         {flat ? (
                             <GroupMessage
                                 message={msg}
-                                start={!joins(messages[i - 1], msg) || msg.id === unreadFromId}
+                                start={!joins(messages[i - 1], msg) || msg.id === unreadFromId || Boolean(msg.replyTo)}
                                 focused={msg.id === focusId}
                                 selfName={selfName}
                                 peerName={peerName}
                                 peerPhoto={peerPhoto}
                                 nameColor={nameColors?.[msg.senderId] ?? null}
+                                replyColor={msg.replyTo ? nameColors?.[msg.replyTo.senderId] ?? null : null}
                                 canDeleteOthers={canDeleteOthers && (!ownerId || msg.senderId !== ownerId)}
+                                actions={actions}
                                 selecting={selecting}
                                 selected={selected.has(String(msg.id))}
                                 onSelect={() => setSelected(new Set([...selected, String(msg.id)]))}
@@ -276,6 +287,7 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
                                 onEditPost={() => onEditPost(msg)}
                                 hideTicks={hideTicks}
                                 canDeleteOthers={canDeleteOthers}
+                                actions={actions}
                                 selecting={selecting}
                                 selected={selected.has(String(msg.id))}
                                 onSelect={() => setSelected(new Set([...selected, String(msg.id)]))}
@@ -297,7 +309,8 @@ function MessageList({ messages, loading, hasMore, loadingOlder, hasNewer, loadi
                     {unreadCount > 0 && <span className={styles.jumpCount}>{formatCount(unreadCount)}</span>}
                 </button>
             )}
-        </div>
+            </div>
+        </>
     )
 }
 

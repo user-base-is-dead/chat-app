@@ -95,6 +95,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.imageResource
@@ -110,6 +111,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.civenth.app.BuildConfig
 import com.civenth.app.R
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.composed
@@ -146,6 +148,8 @@ private val DoodleTile = 300.dp
 private val ChatDoodleTile = 520.dp
 private val Neutral = Color(0xFF7C7A84)
 private val HeaderSpace = 84.dp
+private val PinnedSpace = 60.dp
+private val PinnedTop = 72.dp
 private const val JUMP_NEAR = 10
 
 private sealed interface Confirm {
@@ -195,8 +199,10 @@ fun ChatScreen(
     onLeave: () -> Unit,
     presence: Map<String, Presence> = emptyMap(),
     channelPermissions: List<String>? = null,
+    forward: ForwardOptions = ForwardOptions(emptyList(), emptyList(), emptyList(), emptyMap()) {},
 ) {
     val context = LocalContext.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val listState = rememberLazyListState()
     var confirm by remember { mutableStateOf<Confirm?>(null) }
@@ -251,7 +257,7 @@ fun ChatScreen(
                         groupStart = !sameSide(previous, message),
                         groupEnd = !sameSide(next, message),
                         firstOfSender = !sameSide(previous, message),
-                        runStart = !joins(previous, message) || message.id == room.unreadFromId,
+                        runStart = !joins(previous, message) || message.id == room.unreadFromId || message.replyTo != null,
                     ),
                 )
             }
@@ -261,12 +267,17 @@ fun ChatScreen(
     val showJump by remember(room) {
         derivedStateOf { listState.firstVisibleItemIndex >= JUMP_SHOW_AFTER || room.hasNewer }
     }
-    val headerSpace = with(LocalDensity.current) { HeaderSpace.roundToPx() }
+    val topSpace = if (room.pinned != null) HeaderSpace + PinnedSpace else HeaderSpace
+    val headerSpace = with(LocalDensity.current) { topSpace.roundToPx() }
     var selection by remember(room) { mutableStateOf(emptySet<String>()) }
     val selecting = selection.isNotEmpty()
     var skipTap by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var failedMenu by remember(room) { mutableStateOf<String?>(null) }
+    var inputMode by remember(room) { mutableStateOf<InputMode?>(null) }
+    var draft by remember(room) { mutableStateOf<InputDraft?>(null) }
+    var forwarding by remember(room) { mutableStateOf<List<Message>?>(null) }
+    var holdBottom by remember(room) { mutableStateOf(false) }
     val canDeleteMessage: (Message) -> Boolean = { message ->
         message.mine || !chat.isRoom ||
             ((channelPermissions?.contains("deleteMessages") ?: chat.can("deleteMessages")) &&
@@ -276,9 +287,76 @@ fun ChatScreen(
         if (skipTap) skipTap = false
         else selection = if (message.key in selection) selection - message.key else selection + message.key
     }
+    val canReplyHere = canType && !channel
+    val canPin = if (chat.isRoom) channelPermissions?.contains("deleteMessages") ?: chat.can("deleteMessages") else canType
+    val nameOf: (Message) -> String = { message ->
+        when {
+            message.mine -> selfName
+            channel -> chat.name
+            else -> message.senderName.ifEmpty { if (chat.isRoom) "Deleted Account" else chat.name }
+        }
+    }
+    val notify: (String) -> Unit = { text -> Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
+    val focusInput = {
+        inputFocus.requestFocus()
+        keyboard?.show()
+    }
+    val startReply: (Message) -> Unit = { message ->
+        selection = emptySet()
+        if (inputMode is InputMode.Edit) inputClear += 1
+        inputMode = InputMode.Reply(message)
+        focusInput()
+    }
+    val startEdit: (Message) -> Unit = { message ->
+        selection = emptySet()
+        inputMode = InputMode.Edit(message)
+        draft = InputDraft(message.text, (draft?.key ?: 0) + 1)
+        focusInput()
+    }
+    val closeMode = {
+        if (inputMode is InputMode.Edit) inputClear += 1
+        inputMode = null
+    }
+    val copyLink: (Message) -> Unit = { message ->
+        copyText(context, "${BuildConfig.WEB_URL}/m/${room.chatId}/${message.id}")
+        notify("Link copied")
+    }
+    val togglePin: (Message) -> Unit = { message ->
+        if (room.pinned?.id == message.id) room.unpin() else room.pin(message)
+    }
+    val askDelete: (Message) -> Unit = { message ->
+        if (message.temp) room.delete(message) else confirm = Confirm.DeleteMessage(message)
+    }
+    val actionsFor: (Message) -> List<MessageAction> = { message ->
+        when {
+            message.mine && message.state == SendState.Failed -> listOf(
+                MessageAction(R.drawable.ic_resend, "Resend") { room.resend(message) },
+                MessageAction(R.drawable.ic_delete, "Delete", danger = true) { askDelete(message) },
+            )
+            message.state == SendState.Sending -> listOf(
+                MessageAction(R.drawable.ic_close, "Cancel Sending", danger = true) { room.delete(message) },
+            )
+            else -> buildList {
+                if (canReplyHere) add(MessageAction(R.drawable.ic_reply, "Reply") { startReply(message) })
+                if (message.mine && canType && !channel) add(MessageAction(R.drawable.ic_edit, "Edit") { startEdit(message) })
+                add(MessageAction(R.drawable.ic_copy, "Copy") {
+                    copyText(context, message.text)
+                    notify("Message copied")
+                })
+                add(MessageAction(R.drawable.ic_link, "Copy Link") { copyLink(message) })
+                if (canPin) add(MessageAction(R.drawable.ic_pin, if (room.pinned?.id == message.id) "Unpin" else "Pin") { togglePin(message) })
+                add(MessageAction(R.drawable.ic_forward, "Forward") { forwarding = listOf(message) })
+                if (flat) add(MessageAction(R.drawable.ic_select, "Select") { selection = selection + message.key })
+                val deletable = if (flat) canDeleteMessage(message) else message.mine || !chat.isRoom || chat.can("deleteMessages")
+                if (deletable) add(MessageAction(R.drawable.ic_delete, "Delete", danger = true) { askDelete(message) })
+            }
+        }
+    }
     BackHandler(enabled = selecting) { selection = emptySet() }
 
     BackHandler(enabled = !selecting, onBack = onBack)
+
+    BackHandler(enabled = !selecting && inputMode != null) { closeMode() }
 
     LaunchedEffect(room) {
         if (room.focusInput && canType) inputFocus.requestFocus() else focusManager.clearFocus()
@@ -310,6 +388,18 @@ fun ChatScreen(
         if (room.sentCount > 0) listState.scrollToItem(0)
     }
 
+    LaunchedEffect(room.jump) {
+        val jump = room.jump ?: return@LaunchedEffect
+        if (jump.reloaded) holdBottom = true
+        withFrameNanos { }
+        val target = currentRows.indexOfFirst { (it as? MessageRow)?.message?.id == jump.messageId }
+        if (target < 0) return@LaunchedEffect
+        listState.scrollToItem(target)
+        flashId = jump.messageId
+        delay(FLASH_FOR)
+        if (flashId == jump.messageId) flashId = null
+    }
+
     var newestShown by remember(room) { mutableStateOf<String?>(null) }
     var stick by remember(room) { mutableStateOf(false) }
     LaunchedEffect(messages.lastOrNull()?.key) {
@@ -317,6 +407,10 @@ fun ChatScreen(
         val previous = newestShown
         newestShown = newest
         if (newest == previous) return@LaunchedEffect
+        if (holdBottom) {
+            holdBottom = false
+            return@LaunchedEffect
+        }
         val wasAtBottom = stick || previous == null ||
             listState.firstVisibleItemIndex <= 1 ||
             listState.layoutInfo.visibleItemsInfo.any { it.key == previous }
@@ -379,7 +473,7 @@ fun ChatScreen(
                     reverseLayout = true,
                     userScrollEnabled = !picking,
                     verticalArrangement = Arrangement.spacedBy(if (flat) 0.dp else 3.dp, Alignment.Bottom),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HeaderSpace, bottom = 8.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topSpace, bottom = 8.dp),
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -459,19 +553,16 @@ fun ChatScreen(
                                         start = row.runStart,
                                         focused = message.id == flashId,
                                         selfName = selfName,
+                                        actions = { actionsFor(message) },
                                         peerName = if (chat.isRoom) "" else chat.name,
                                         peerPhoto = if (chat.isRoom) "" else chat.photo,
                                         nameColor = nameColors[message.senderId],
-                                        canDelete = canDeleteMessage(message),
+                                        replyColor = message.replyTo?.let { nameColors[it.senderId] },
                                         selecting = selecting,
                                         selected = message.key in selection,
                                         onSelect = { toggle(message) },
-                                        onCopy = { copyText(context, message.text) },
-                                        onResend = { room.resend(message) },
-                                        onDelete = {
-                                            if (message.temp) room.delete(message)
-                                            else confirm = Confirm.DeleteMessage(message)
-                                        },
+                                        onSwipeReply = if (canReplyHere && message.state == SendState.Sent) ({ startReply(message) }) else null,
+                                        onOpenReply = room::jumpTo,
                                         askMenu = failedMenu == message.key,
                                         onMenuAsked = { failedMenu = null },
                                     )
@@ -497,13 +588,7 @@ fun ChatScreen(
                                     },
                                     firstOfSender = row.firstOfSender,
                                     hideTicks = chat.kind == "channel",
-                                    canDelete = !chat.isRoom || chat.can("deleteMessages"),
-                                    onCopy = { copyText(context, message.text) },
-                                    onResend = { room.resend(message) },
-                                    onDelete = {
-                                        if (message.temp) room.delete(message)
-                                        else confirm = Confirm.DeleteMessage(message)
-                                    },
+                                    actions = { actionsFor(message) },
                                 )
                                 }
                             }
@@ -543,7 +628,7 @@ fun ChatScreen(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .padding(top = HeaderSpace + 14.dp)
+                                .padding(top = topSpace + 14.dp)
                                 .graphicsLayer { alpha = dayAlpha },
                         ) {
                             FloatingDay(topDay)
@@ -589,20 +674,46 @@ fun ChatScreen(
                         focus = inputFocus,
                         onTyping = room::typed,
                         onSend = { text ->
-                            if (channel) {
-                                postDraft = PostDraft(text, PostSwitches())
-                                false
-                            } else {
-                                room.send(text)
-                                true
+                            when (val mode = inputMode) {
+                                is InputMode.Edit -> {
+                                    room.edit(mode.message, text)
+                                    inputMode = null
+                                    true
+                                }
+                                is InputMode.Reply -> {
+                                    room.send(text, replyTo = mode.message.asReply(nameOf(mode.message)))
+                                    inputMode = null
+                                    true
+                                }
+                                null -> if (channel) {
+                                    postDraft = PostDraft(text, PostSwitches())
+                                    false
+                                } else {
+                                    room.send(text)
+                                    true
+                                }
                             }
                         },
                         onAttach = { Toast.makeText(context, "Attachments coming soon", Toast.LENGTH_SHORT).show() },
                         placeholder = if (channel) "Broadcast" else "Message",
                         clearKey = inputClear,
+                        strip = inputMode?.let { mode -> { InputStrip(mode, nameOf(mode.message), onClose = closeMode) } },
+                        draft = draft,
                     )
                 }
             }
+        }
+        room.pinned?.let { pinned ->
+            PinnedBar(
+                message = pinned,
+                canUnpin = canPin,
+                onOpen = { room.jumpTo(pinned.id) },
+                onUnpin = room::unpin,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = PinnedTop),
+            )
         }
         AnimatedContent(
             targetState = selecting,
@@ -613,22 +724,45 @@ fun ChatScreen(
             label = "selectBar",
         ) { showBar ->
         if (showBar) {
-            val chosen = messages.filter { it.key in selection }
+            val chosen = messages.filter { it.key in selection }.sortedBy { it.number }
+            val single = chosen.singleOrNull()
+            val sent = chosen.filter { it.state == SendState.Sent }
+            val done = { selection = emptySet() }
+            val barActions = buildList {
+                if (single != null && single.mine && single.state == SendState.Failed) {
+                    add(MessageAction(R.drawable.ic_resend, "Resend") {
+                        room.resend(single)
+                        done()
+                    })
+                } else if (single != null && single.state == SendState.Sent) {
+                    if (canReplyHere) add(MessageAction(R.drawable.ic_reply, "Reply") { startReply(single) })
+                    if (single.mine && canType && !channel) add(MessageAction(R.drawable.ic_edit, "Edit") { startEdit(single) })
+                }
+                add(MessageAction(R.drawable.ic_copy, "Copy") {
+                    copyText(context, chosen.joinToString("\n") { it.text })
+                    notify(if (chosen.size == 1) "Message copied" else "${chosen.size} messages copied")
+                    done()
+                })
+                if (sent.isNotEmpty()) add(MessageAction(R.drawable.ic_forward, "Forward") { forwarding = sent })
+                if (chosen.isNotEmpty() && chosen.all(canDeleteMessage)) {
+                    add(MessageAction(R.drawable.ic_delete, "Delete", danger = true) { confirm = Confirm.DeleteMany(chosen) })
+                }
+            }
+            val barMore = if (single != null && single.state == SendState.Sent) buildList {
+                add(MessageAction(R.drawable.ic_link, "Copy Link") {
+                    copyLink(single)
+                    done()
+                })
+                if (canPin) add(MessageAction(R.drawable.ic_pin, if (room.pinned?.id == single.id) "Unpin" else "Pin") {
+                    togglePin(single)
+                    done()
+                })
+            } else emptyList()
             SelectionBar(
                 count = chosen.size,
-                canDelete = chosen.isNotEmpty() && chosen.all(canDeleteMessage),
-                canResend = chosen.size == 1 && chosen[0].state == SendState.Failed,
-                onClose = { selection = emptySet() },
-                onCopy = {
-                    copyText(context, chosen.sortedBy { it.createdAt }.joinToString("\n") { it.text })
-                    Toast.makeText(context, if (chosen.size == 1) "Message copied" else "${chosen.size} messages copied", Toast.LENGTH_SHORT).show()
-                    selection = emptySet()
-                },
-                onResend = {
-                    room.resend(chosen[0])
-                    selection = emptySet()
-                },
-                onDelete = { confirm = Confirm.DeleteMany(chosen) },
+                actions = barActions,
+                more = barMore,
+                onClose = done,
             )
         } else Header(
             chat = chat,
@@ -690,6 +824,19 @@ fun ChatScreen(
             userId = userId,
             presence = presence,
             onBack = { membersOpen = false },
+        )
+    }
+
+    forwarding?.let { list ->
+        ForwardScreen(
+            options = forward,
+            count = list.size,
+            onPick = { id, name ->
+                room.forward(list, id, name)
+                forwarding = null
+                selection = emptySet()
+            },
+            onBack = { forwarding = null },
         )
     }
 
@@ -996,13 +1143,11 @@ private fun Modifier.floatingPill(shape: androidx.compose.ui.graphics.Shape): Mo
 @Composable
 private fun SelectionBar(
     count: Int,
-    canDelete: Boolean,
-    canResend: Boolean,
+    actions: List<MessageAction>,
+    more: List<MessageAction>,
     onClose: () -> Unit,
-    onCopy: () -> Unit,
-    onResend: () -> Unit,
-    onDelete: () -> Unit,
 ) {
+    var moreOpen by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1026,7 +1171,7 @@ private fun SelectionBar(
                 .weight(1f)
                 .height(HeaderPillHeight)
                 .floatingPill(CircleShape)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 18.dp),
         ) {
             AnimatedContent(
                 targetState = count,
@@ -1037,7 +1182,7 @@ private fun SelectionBar(
                 },
                 label = "count",
             ) { value ->
-                Text(if (value == 1) "1 selected" else "$value selected", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(value.toString(), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
         Row(
@@ -1047,25 +1192,30 @@ private fun SelectionBar(
                 .floatingPill(CircleShape)
                 .padding(horizontal = 6.dp),
         ) {
-            if (canResend) BarAction("Resend", Ink, onResend)
-            BarAction("Copy", Ink, onCopy)
-            if (canDelete) BarAction("Delete", Danger, onDelete)
+            actions.forEach { action ->
+                BarIcon(action.icon, action.label, if (action.danger) Danger else Ink, action.onClick)
+            }
+            if (more.isNotEmpty()) {
+                Box {
+                    BarIcon(R.drawable.ic_more, "More", Ink) { moreOpen = true }
+                    if (moreOpen) ActionMenu(more) { moreOpen = false }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun BarAction(label: String, color: Color, onClick: () -> Unit) {
-    Text(
-        text = label,
-        color = color,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.SemiBold,
+private fun BarIcon(icon: Int, label: String, tint: Color, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
+            .size(40.dp)
             .clip(CircleShape)
-            .pressClickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-    )
+            .pressClickable(onClick = onClick),
+    ) {
+        Icon(painterResource(icon), label, tint = tint, modifier = Modifier.size(22.dp))
+    }
 }
 
 @Composable

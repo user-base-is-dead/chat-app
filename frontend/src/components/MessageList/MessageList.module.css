@@ -170,10 +170,10 @@
 }
 
 .selectBar {
-    position: absolute;
-    top: -59px;
-    left: 8px;
-    right: 8px;
+    position: relative;
+    flex-shrink: 0;
+    height: 56px;
+    margin: 10px 12px 6px;
     z-index: 5;
     display: flex;
     align-items: center;
@@ -249,4 +249,8 @@
     .selectCount {
         animation: none;
     }
+}
+
+@media (max-width: 768px) {
+    .selectBar { height: 50px; margin: 8px 8px 4px; }
 }

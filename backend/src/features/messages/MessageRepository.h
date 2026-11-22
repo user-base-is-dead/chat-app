@@ -22,8 +22,13 @@ class MessageRepository
                                  int64_t deviceId,
                                  std::string ciphertext,
                                  bool allowReactions = true,
-                                 bool allowComments = true);
+                                 bool allowComments = true,
+                                 Extras extras = {});
     drogon::Task<std::optional<Message>> edit(int64_t chatId, int64_t id, int64_t senderId, std::string ciphertext);
+    drogon::Task<std::optional<Message>> find(int64_t chatId, int64_t id);
+    drogon::Task<bool> exists(int64_t chatId, int64_t id);
+    drogon::Task<std::optional<Message>> pinned(int64_t chatId);
+    drogon::Task<> setPinned(int64_t chatId, int64_t messageId);
     drogon::Task<bool> remove(int64_t chatId, int64_t id);
 };
 }

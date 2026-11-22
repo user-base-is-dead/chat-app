@@ -5,13 +5,18 @@ import AttachIcon from '../Icons/AttachIcon'
 import EmojiIcon from '../Icons/EmojiIcon'
 import EmojiPanel from '../EmojiPanel/EmojiPanel'
 
-function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping, focusNow, onFocused }) {
+function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping, focusNow, onFocused, strip, draft }) {
     const [text, setText] = useState('')
     const [clearedKey, setClearedKey] = useState(clearKey)
+    const [draftKey, setDraftKey] = useState(draft?.key ?? null)
 
     if (clearedKey !== clearKey) {
         setClearedKey(clearKey)
         setText('')
+    }
+    if (draft && draftKey !== draft.key) {
+        setDraftKey(draft.key)
+        setText(draft.text)
     }
     const [emojiOpen, setEmojiOpen] = useState(false)
     const [emojiPinned, setEmojiPinned] = useState(false)
@@ -130,6 +135,7 @@ function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping,
                     onPointerLeave={handleHoverLeave}
                 />
             )}
+            {strip}
             <form className={styles.bar} onSubmit={handleSubmit}>
                 <button className={styles.iconButton} type="button" aria-label="Attach">
                     <AttachIcon />

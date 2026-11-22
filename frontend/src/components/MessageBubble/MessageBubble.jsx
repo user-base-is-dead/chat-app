@@ -12,6 +12,7 @@ import CommentIcon from '../Icons/CommentIcon'
 import EditIcon from '../Icons/EditIcon'
 import { REACTIONS } from '../../utils/reactions'
 import { messageMenuItems } from './messageMenu'
+import { Edited, Forwarded } from '../MessageExtras/MessageExtras'
 import { dateTime } from '../../utils/dayLabel'
 
 const statusIcons = {
@@ -30,7 +31,7 @@ function StatusIcon({ status }) {
     )
 }
 
-function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, channel, stats, canManagePosts, selecting, selected, onSelect, onReact, onOpenComments, onToggleSwitch, onEditPost, onResend, onDelete }) {
+function MessageBubble({ message, focused, groupStart, groupEnd, showSender, firstOfSender, hideTicks, canDeleteOthers = true, actions, channel, stats, canManagePosts, selecting, selected, onSelect, onReact, onOpenComments, onToggleSwitch, onEditPost, onResend, onDelete }) {
     const [menu, setMenu] = useState(null)
     const tailClip = useId()
     const bubbleRef = useRef(null)
@@ -61,7 +62,7 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
         { label: stats.allowReactions ? 'Turn off reactions' : 'Turn on reactions', Icon: EmojiIcon, onClick: () => onToggleSwitch('allowReactions') },
     ] : []
 
-    const items = menu?.manage ? manageItems : messageMenuItems({ message, canDeleteOthers, onResend, onDelete, onSelect })
+    const items = menu?.manage ? manageItems : messageMenuItems({ message, canDeleteOthers, actions, onResend, onDelete, onSelect: channel ? null : onSelect })
 
     const openManage = (e) => {
         if (selecting) return
@@ -96,7 +97,8 @@ function MessageBubble({ message, focused, groupStart, groupEnd, showSender, fir
         <div className={classes} ref={bubbleRef} data-message-id={message.id} onContextMenu={openMenu}>
             {showSender && firstOfSender && <span className={styles.sender}>{senderName}</span>}
             {showSender && groupEnd && <span className={styles.senderAvatar}><Avatar name={senderName} photo={channel?.photo} size={32} /></span>}
-            <span className={styles.text}>{message.text}</span>
+            {message.forwardedFrom && <Forwarded name={message.forwardedFrom.name} />}
+            <span className={styles.text}>{message.text}{message.editedAt && <Edited />}</span>
             {post ? (
                 <PostFooter stats={stats} time={message.createdAt ? dateTime(message.createdAt) : message.time} onReact={onReact} onOpenComments={onOpenComments} onManage={manage ? openManage : undefined} />
             ) : (

@@ -22,19 +22,25 @@ import {
     deleteChat as removeChat,
     deleteMessage as removeMessage,
     editMessage,
+    forwardMessage,
     listChats,
     loadMessages,
+    loadMessagesAround,
     loadNewerMessages,
+    loadPinned,
+    loadPlace,
     markRead,
     MESSAGE_PAGE_SIZE,
     messageText,
     muteChat,
     openDm,
     pinChat,
+    pinMessage,
     restrictChat,
     sendMessage,
     unmuteChat,
     unpinChat,
+    unpinMessage,
     unrestrictChat,
 } from '../../api/chats'
 import { connectRealtime } from '../../api/realtime'
@@ -63,6 +69,8 @@ import { useGroupMembers } from './useGroupMembers'
 import { can, colorOf } from '../../utils/roles'
 import PostComments from '../../components/PostComments/PostComments'
 import PostDialog from '../../components/PostDialog/PostDialog'
+import ForwardDialog from '../../components/ForwardDialog/ForwardDialog'
+import { InputStrip } from '../../components/MessageExtras/MessageExtras'
 
 const TYPING_SEND_GAP = 3000
 const TYPING_SHOW_FOR = 6000
@@ -166,8 +174,11 @@ async function loadAll(previous = [], onResponse) {
     return [...chats.map(toChat), ...groups, ...texts]
 }
 
+const MESSAGE_PATH = /^\/m\/(\d+)\/(\d+)\/?$/
+
 function toMessage(message, userId, peerLastReadId) {
     const mine = message.senderId === userId
+    const reply = message.replyTo
     return {
         id: message.id,
         senderId: message.senderId,
@@ -175,6 +186,9 @@ function toMessage(message, userId, peerLastReadId) {
         text: messageText(message),
         time: formatTime(message.createdAt),
         createdAt: message.createdAt,
+        editedAt: message.editedAt ?? null,
+        replyTo: reply ? { id: reply.id, senderId: reply.senderId, senderName: reply.senderName, text: reply.deleted ? '' : messageText(reply), deleted: Boolean(reply.deleted) } : null,
+        forwardedFrom: message.forwardedFrom ?? null,
         mine,
         status: mine ? (isAfter(message.id, peerLastReadId) ? 'sent' : 'read') : undefined,
     }
@@ -225,6 +239,12 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     const [inputClear, setInputClear] = useState(0)
     const [channelsByRoom, setChannelsByRoom] = useState({})
     const [railGroupId, setRailGroupId] = useState(null)
+    const [inputMode, setInputMode] = useState(null)
+    const [draft, setDraft] = useState(null)
+    const [pinnedByChat, setPinnedByChat] = useState({})
+    const [forwarding, setForwarding] = useState(null)
+    const pendingJump = useRef(null)
+    const linkTarget = useRef(window.location.pathname.match(MESSAGE_PATH))
     const realtimeRef = useRef(null)
     const realtimeHandlers = useRef(null)
     const lastTypingSent = useRef(0)
@@ -300,6 +320,19 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         const timer = setTimeout(() => setFocus(null), FOCUS_DURATION)
         return () => clearTimeout(timer)
     }, [focus])
+
+    useEffect(() => {
+        if (!selectedChatId) return
+        let active = true
+        loadPinned(selectedChatId)
+            .then(({ message }) => {
+                if (active) setPinnedByChat((prev) => ({ ...prev, [selectedChatId]: message ? toMessage(message, user.id, '0') : null }))
+            })
+            .catch(() => {})
+        return () => {
+            active = false
+        }
+    }, [selectedChatId, user.id])
 
     useEffect(() => {
         window.history.replaceState(null, '')
@@ -812,9 +845,9 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         })
     }
 
-    const deliver = async (chatId, messageId, text, options) => {
+    const deliver = async (chatId, messageId, text, options, replyToId) => {
         try {
-            const saved = await sendMessage(chatId, text, options)
+            const saved = await sendMessage(chatId, text, options, replyToId)
             const mapped = { ...toMessage(saved, user.id, '0'), key: messageId }
             setMessagesByChat((prev) => ({
                 ...prev,
@@ -947,8 +980,19 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                 if (data.senderId !== user.id) setTypingUntil((prev) => ({ ...prev, [data.chatId]: 0 }))
             } else if (event === 'message.edited') {
                 applyMessage(data, false)
+                const text = messageText(data)
+                setPinnedByChat((prev) => (prev[data.chatId]?.id === data.id ? { ...prev, [data.chatId]: { ...prev[data.chatId], text } } : prev))
+                setMessagesByChat((prev) => (prev[data.chatId]
+                    ? { ...prev, [data.chatId]: prev[data.chatId].map((m) => (m.replyTo?.id === data.id ? { ...m, replyTo: { ...m.replyTo, text } } : m)) }
+                    : prev))
+            } else if (event === 'message.pinned') {
+                setPinnedByChat((prev) => ({ ...prev, [data.chatId]: data.message ? toMessage(data.message, user.id, '0') : null }))
             } else if (event === 'message.deleted') {
                 dropMessage(data.chatId, data.id)
+                setPinnedByChat((prev) => (prev[data.chatId]?.id === data.id ? { ...prev, [data.chatId]: null } : prev))
+                setMessagesByChat((prev) => (prev[data.chatId]
+                    ? { ...prev, [data.chatId]: prev[data.chatId].map((m) => (m.replyTo?.id === data.id ? { ...m, replyTo: { ...m.replyTo, text: '', deleted: true } } : m)) }
+                    : prev))
             } else if (event === 'chat.deleted') {
                 if (chats.some((c) => c.id === data.chatId)) dropChat(data.chatId)
             } else if (event === 'room.removed') {
@@ -998,12 +1042,127 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         realtimeHandlers.current = handlers
     })
 
+    const mode = inputMode?.chatId === selectedChatId ? inputMode : null
+
+    const nameOf = (message) => {
+        if (message.mine) return user.displayName || user.username
+        if (selectedChat?.kind === 'channel') return selectedChat.name
+        return message.senderName || (selectedChat?.kind ? 'Deleted Account' : selectedChat?.name)
+    }
+
+    const saveMessageEdit = async (message, text) => {
+        const chatId = selectedChat.id
+        updateMessage(chatId, message.id, { text, editedAt: Date.now() })
+        try {
+            applyMessage(await editMessage(chatId, message.id, text), false)
+        } catch (error) {
+            updateMessage(chatId, message.id, { text: message.text, editedAt: message.editedAt })
+            showToast(error.message)
+        }
+    }
+
     const handleSend = (text) => {
+        if (mode?.kind === 'edit') {
+            setInputMode(null)
+            if (text !== mode.message.text) saveMessageEdit(mode.message, text)
+            return
+        }
         if (selectedChat?.id === channelId) {
             setPostDialog({ text, switches: DEFAULT_SWITCHES })
             return false
         }
-        postMessage(text)
+        const replyTo = mode?.kind === 'reply'
+            ? { id: mode.message.id, senderId: mode.message.senderId, senderName: nameOf(mode.message), text: mode.message.text, deleted: false }
+            : null
+        setInputMode(null)
+        postMessage(text, undefined, replyTo)
+    }
+
+    const closeMode = () => {
+        if (mode?.kind === 'edit') setInputClear((tick) => tick + 1)
+        setInputMode(null)
+    }
+
+    const jumpTo = async (chatId, messageId) => {
+        if ((messagesByChat[chatId] || []).some((m) => m.id === messageId)) {
+            setFocus({ chatId, messageId })
+            return
+        }
+        try {
+            const [older, newer] = await loadMessagesAround(chatId, messageId)
+            if (!older.some((m) => m.id === messageId)) {
+                showToast('Message not found')
+                return
+            }
+            const chat = chats.find((c) => c.id === chatId)
+            setMessagesByChat((prev) => ({ ...prev, [chatId]: mergeMessages([], [...older, ...newer].map((m) => toMessage(m, user.id, chat?.peerLastReadId ?? '0'))) }))
+            setPage(chatId, { hasMore: older.length === MESSAGE_PAGE_SIZE, hasNewer: newer.length === MESSAGE_PAGE_SIZE, loadingOlder: false, loadingNewer: false, unreadFrom: null })
+            setFocus({ chatId, messageId })
+        } catch (error) {
+            showToast(error.message)
+        }
+    }
+
+    useEffect(() => {
+        const pending = pendingJump.current
+        if (!pending || !messagesByChat[pending.chatId]) return
+        pendingJump.current = null
+        jumpTo(pending.chatId, pending.messageId)
+    })
+
+    const openLink = async (chatId, messageId) => {
+        try {
+            const place = await loadPlace(chatId)
+            if (place.kind === 'text') {
+                const group = chats.find((c) => c.id === place.roomId)
+                const list = group && (channelsByRoom[group.id] ?? await loadChannels(group.id))
+                const channel = list?.channels.find((item) => item.id === chatId)
+                if (!channel) throw new Error('Message not found')
+                setRailGroupId(group.id)
+                openChannel(group, channel)
+            } else {
+                const chat = chats.find((c) => c.id === chatId)
+                if (!chat) throw new Error('Message not found')
+                openChat(chat)
+            }
+            pendingJump.current = { chatId, messageId }
+        } catch {
+            showToast('Message not found')
+        }
+    }
+
+    useEffect(() => {
+        if (chatsLoading || !linkTarget.current) return
+        const [, chatId, messageId] = linkTarget.current
+        linkTarget.current = null
+        window.history.replaceState(null, '', '/')
+        openLink(chatId, messageId)
+    })
+
+    const toggleMessagePin = async (message) => {
+        const chatId = selectedChatId
+        const current = pinnedByChat[chatId] ?? null
+        const unpinning = current?.id === message.id
+        setPinnedByChat((prev) => ({ ...prev, [chatId]: unpinning ? null : message }))
+        try {
+            if (unpinning) await unpinMessage(chatId)
+            else await pinMessage(chatId, message.id)
+        } catch (error) {
+            setPinnedByChat((prev) => ({ ...prev, [chatId]: current }))
+            showToast(error.message)
+        }
+    }
+
+    const forwardTo = async (target) => {
+        const list = forwarding.filter((m) => !isTemp(m.id)).sort(compareMessages)
+        const fromChatId = selectedChatId
+        setForwarding(null)
+        try {
+            for (const message of list) await forwardMessage(target.id, fromChatId, message.id)
+            showToast(`Forwarded to ${target.name}`)
+        } catch (error) {
+            showToast(error.message)
+        }
     }
 
     const broadcast = (text, switches) => {
@@ -1031,7 +1190,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         }
     }
 
-    const postMessage = async (text, switches) => {
+    const postMessage = async (text, switches, replyTo) => {
         const chatId = selectedChat?.id
         if (pagesByChat[chatId]?.hasNewer) await jumpToLatest()
         lastTypingSent.current = 0
@@ -1040,9 +1199,9 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         const tempId = `temp-${now}`
         setMessagesByChat((prev) => ({
             ...prev,
-            [chatId]: [...(prev[chatId] || []), { id: tempId, senderId: user.id, text, time: formatTime(now), createdAt: now, mine: true, status: 'sending' }],
+            [chatId]: [...(prev[chatId] || []), { id: tempId, senderId: user.id, text, time: formatTime(now), createdAt: now, mine: true, status: 'sending', replyTo: replyTo ?? null }],
         }))
-        deliver(chatId, tempId, text, switches)
+        deliver(chatId, tempId, text, switches, replyTo?.id)
     }
 
     const openComments = (messageId) => {
@@ -1055,7 +1214,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
         const message = messages.find((m) => m.id === messageId)
         if (!message) return
         updateMessage(chatId, messageId, { status: 'sending' })
-        deliver(chatId, messageId, message.text)
+        deliver(chatId, messageId, message.text, undefined, message.replyTo?.id)
     }
 
     const deleteMessages = (messageIds) => {
@@ -1105,6 +1264,62 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                 }
             },
         })
+    }
+
+    const chatHeader = selectedChat && (
+        <ChatHeader
+            chat={selectedGroup}
+            channelName={channelLabel}
+            typing={(typingUntil[selectedChat.id] ?? 0) > 0}
+            typingName={typingNames[selectedChat.id]}
+            onBack={() => window.history.go(window.history.state?.infoOpen ? -2 : -1)}
+            onOpenInfo={openInfo}
+            onCall={() => showToast('Calls coming soon')}
+            onSearch={focusSearch}
+            onToggleMute={() => toggleMute(selectedGroup)}
+            onLeave={() => leaveChat(selectedGroup)}
+            onDelete={() => (selectedGroup.kind ? deleteRoomChat(selectedGroup) : deleteChat(selectedGroup.id))}
+            onMembers={groupOpen ? toggleMembers : undefined}
+            membersOpen={groupOpen && membersPanel}
+        />
+    )
+
+    const canType = Boolean(selectedChat) && !sendBlocked && !(selectedChat.kind && selectedChat.kind !== 'group' && !selectedChat.canSend)
+        && !isRequest && !isRestricted && !selectedChat.peerDeleted && !selectedChat.peerDisabled
+    const canPinHere = selectedChat?.kind
+        ? (channelPermissions ? channelPermissions.includes('deleteMessages') : can(selectedChat, 'deleteMessages'))
+        : canType
+    const pinned = selectedChatId ? pinnedByChat[selectedChatId] ?? null : null
+    const modeName = !mode ? '' : mode.message.mine
+        ? user.displayName || user.username
+        : selectedChat?.kind === 'channel' ? selectedChat.name : mode.message.senderName || (selectedChat?.kind ? 'Deleted Account' : selectedChat?.name)
+    const messageActions = {
+        canReply: canType && !channelId,
+        canEdit: canType && !channelId,
+        canPin: canPinHere,
+        pinnedId: pinned?.id ?? null,
+        reply: (message) => {
+            if (mode?.kind === 'edit') setInputClear((tick) => tick + 1)
+            setInputMode({ kind: 'reply', message, chatId: selectedChatId })
+            setInputFocus(true)
+        },
+        edit: (message) => {
+            setInputMode({ kind: 'edit', message, chatId: selectedChatId })
+            setDraft((current) => ({ text: message.text, key: (current?.key ?? 0) + 1 }))
+            setInputFocus(true)
+        },
+        copyLink: (message) => {
+            const link = `${window.location.origin}/m/${selectedChatId}/${message.id}`
+            const copied = navigator.clipboard?.writeText(link)
+            if (!copied) {
+                showToast('Could not copy the link')
+                return
+            }
+            copied.then(() => showToast('Link copied')).catch(() => showToast('Could not copy the link'))
+        },
+        pin: toggleMessagePin,
+        forward: (list) => setForwarding(list),
+        openReply: (messageId) => jumpTo(selectedChatId, messageId),
     }
 
     return (
@@ -1158,21 +1373,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                 {selectedChat ? (
                     <>
                     <div className={styles.chatInner}>
-                        <ChatHeader
-                            chat={selectedGroup}
-                            channelName={channelLabel}
-                            typing={(typingUntil[selectedChat.id] ?? 0) > 0}
-                            typingName={typingNames[selectedChat.id]}
-                            onBack={() => window.history.go(window.history.state?.infoOpen ? -2 : -1)}
-                            onOpenInfo={openInfo}
-                            onCall={() => showToast('Calls coming soon')}
-                            onSearch={focusSearch}
-                            onToggleMute={() => toggleMute(selectedGroup)}
-                            onLeave={() => leaveChat(selectedGroup)}
-                            onDelete={() => (selectedGroup.kind ? deleteRoomChat(selectedGroup) : deleteChat(selectedGroup.id))}
-                            onMembers={groupOpen ? toggleMembers : undefined}
-                            membersOpen={groupOpen && membersPanel}
-                        />
+                        {commentsPost && !commentsOff && chatHeader}
                         {toast && <Toast key={toast.at} text={toast.text} />}
                         {postDialog && (
                             <PostDialog
@@ -1200,6 +1401,12 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                         ) : (
                         <>
                         <MessageList
+                            header={chatHeader}
+                            pinned={pinned}
+                            canUnpin={canPinHere}
+                            onOpenPinned={(messageId) => jumpTo(selectedChatId, messageId)}
+                            onUnpin={toggleMessagePin}
+                            actions={messageActions}
                             key={selectedChat.id}
                             messages={messages}
                             loading={!messagesByChat[selectedChat.id]}
@@ -1252,7 +1459,16 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                             <AccountBar text="This account is disabled" />
                         ) : (
                             <>
-                                <MessageInput placeholder={channelId ? 'Broadcast' : 'Message'} clearKey={inputClear} onSend={handleSend} onTyping={sendTyping} focusNow={inputFocus} onFocused={clearInputFocus} />
+                                <MessageInput
+                                    placeholder={channelId ? 'Broadcast' : 'Message'}
+                                    clearKey={inputClear}
+                                    onSend={handleSend}
+                                    onTyping={sendTyping}
+                                    focusNow={inputFocus}
+                                    onFocused={clearInputFocus}
+                                    strip={mode ? <InputStrip mode={mode} name={modeName} onClose={closeMode} /> : null}
+                                    draft={draft}
+                                />
                             </>
                         )}
                         </>
@@ -1306,6 +1522,18 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                 </div>
             )}
             {joining && <JoinDialog room={joining.room} error={joining.error} onJoin={confirmJoin} onClose={closeJoin} />}
+            {forwarding && (
+                <ForwardDialog
+                    count={forwarding.length}
+                    people={chats.filter((c) => !c.kind && c.status === 'active' && !c.peerDeleted && !c.peerDisabled && !c.leaving)}
+                    groups={chats.filter((c) => c.kind === 'group' && !c.roomId && c.status === 'active')}
+                    channels={chats.filter((c) => c.kind === 'channel' && c.status === 'active' && c.canSend)}
+                    channelsByRoom={channelsByRoom}
+                    loadChannels={loadChannels}
+                    onPick={forwardTo}
+                    onClose={() => setForwarding(null)}
+                />
+            )}
             {confirm && (
                 <ConfirmDialog
                     title={confirm.title}

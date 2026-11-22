@@ -92,7 +92,7 @@ fun MessageBubble(
     showSender: Boolean = false,
     firstOfSender: Boolean = false,
     hideTicks: Boolean = false,
-    canDelete: Boolean = true,
+    actions: () -> List<MessageAction> = { emptyList() },
     channelName: String? = null,
     channelPhoto: String = "",
     stats: PostStats? = null,
@@ -101,9 +101,6 @@ fun MessageBubble(
     onOpenComments: () -> Unit = {},
     onTogglePostSwitch: (Boolean) -> Unit = {},
     onEditPost: () -> Unit = {},
-    onCopy: () -> Unit,
-    onResend: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     val post = channelName != null && message.state == SendState.Sent
     val mine = message.mine && channelName == null
@@ -178,7 +175,7 @@ fun MessageBubble(
                         }
                     }
                     .background(if (mine) BubbleMine else BubbleOther, shape)
-                    .combinedClickable(onClick = {}, onLongClick = { menuOpen = true })
+                    .combinedClickable(onClick = { menuOpen = true }, onLongClick = { menuOpen = true })
                     .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             ) {
                 if (showSender && firstOfSender) {
@@ -189,8 +186,9 @@ fun MessageBubble(
                         fontWeight = FontWeight.Bold,
                     )
                 }
+                message.forwardedFrom?.let { ForwardedLabel(it.name, if (mine) BubbleMineMuted else BubbleMuted) }
                 if (post) {
-                    Text(text = message.text, color = Ink, fontSize = 18.sp, lineHeight = 25.sp)
+                    Text(text = withEdited(message.text, message.editedAt != null, BubbleMuted), color = Ink, fontSize = 18.sp, lineHeight = 25.sp)
                     PostFooter(
                         stats = stats,
                         createdAt = message.createdAt,
@@ -204,7 +202,7 @@ fun MessageBubble(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                 Text(
-                    text = message.text,
+                    text = withEdited(message.text, message.editedAt != null, if (mine) BubbleMineMuted else BubbleMuted),
                     color = if (mine) BubbleMineText else Ink,
                     fontSize = 18.sp,
                     lineHeight = 25.sp,
@@ -223,57 +221,33 @@ fun MessageBubble(
                 }
                 }
             }
-            if (menuOpen) DropdownMenu(
-                expanded = true,
-                onDismissRequest = { menuOpen = false },
-                shape = RoundedCornerShape(18.dp),
-                containerColor = Panel,
-            ) {
-                if (post && stats?.allowReactions == true) {
-                    Row(modifier = Modifier.padding(horizontal = 6.dp)) {
-                        REACTIONS.forEach { emoji ->
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(if (stats.myReaction == emoji) Chroma.copy(alpha = 0.22f) else Color.Transparent)
-                                    .clickable {
-                                        menuOpen = false
-                                        onReact(emoji)
-                                    },
-                            ) {
-                                Text(emoji, fontSize = 22.sp)
+            if (menuOpen) {
+                ActionMenu(
+                    actions = actions(),
+                    title = if (message.state == SendState.Failed) "Message not sent" else null,
+                    header = if (post && stats?.allowReactions == true) {
+                        {
+                            Row(modifier = Modifier.padding(horizontal = 6.dp)) {
+                                REACTIONS.forEach { emoji ->
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(if (stats.myReaction == emoji) Chroma.copy(alpha = 0.22f) else Color.Transparent)
+                                            .clickable {
+                                                menuOpen = false
+                                                onReact(emoji)
+                                            },
+                                    ) {
+                                        Text(emoji, fontSize = 22.sp)
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-                if (message.state == SendState.Failed) {
-                    Text(
-                        text = "Message not sent",
-                        color = InkMuted,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
-                when (message.state) {
-                    SendState.Failed -> MenuItem("Resend") {
-                        menuOpen = false
-                        onResend()
-                    }
-                    SendState.Sending -> Unit
-                    SendState.Sent -> MenuItem("Copy") {
-                        menuOpen = false
-                        onCopy()
-                    }
-                }
-                val deleteLabel = if (message.state == SendState.Sending) "Cancel Sending" else "Delete"
-                if (mine || canDelete) {
-                    MenuItem(deleteLabel, danger = true) {
-                        menuOpen = false
-                        onDelete()
-                    }
-                }
+                    } else null,
+                    onDismiss = { menuOpen = false },
+                )
             }
         }
         }

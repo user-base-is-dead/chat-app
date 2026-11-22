@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import com.civenth.app.data.ApiError
 import com.civenth.app.data.Chat
 import com.civenth.app.data.ChatRepository
+import com.civenth.app.data.ForwardRef
+import com.civenth.app.data.ReplyRef
 import com.civenth.app.data.MESSAGE_PAGE_SIZE
 import com.civenth.app.data.PostRepository
 import com.civenth.app.data.PostStats
@@ -44,6 +46,9 @@ data class Message(
     val live: Boolean = false,
     val senderId: String = "",
     val senderName: String = "",
+    val editedAt: Long? = null,
+    val replyTo: ReplyRef? = null,
+    val forwardedFrom: ForwardRef? = null,
 ) {
     val temp: Boolean get() = id.startsWith("temp-")
     val number: Long get() = id.toLongOrNull() ?: Long.MAX_VALUE
@@ -104,6 +109,11 @@ class ChatRoom(
         private set
     var onlineCount by mutableStateOf(0)
         private set
+    var pinned by mutableStateOf<Message?>(null)
+        private set
+    var jump by mutableStateOf<Jump?>(null)
+        private set
+    private var jumpCount = 0
 
     init {
         realtime.events.onEach(::handleEvent).launchIn(scope)
@@ -113,6 +123,12 @@ class ChatRoom(
             } catch (_: ApiError) {
             } finally {
                 loading = false
+            }
+        }
+        scope.launch {
+            try {
+                pinned = repository.pinned(chatId)?.let(::toMessage)
+            } catch (_: ApiError) {
             }
         }
         if (opened.isRoom) {
@@ -204,7 +220,7 @@ class ChatRoom(
         sendTyping(true)
     }
 
-    fun send(text: String, switches: PostSwitches? = null) {
+    fun send(text: String, switches: PostSwitches? = null, replyTo: ReplyRef? = null) {
         lastTypingSent = 0
         sendTyping(false)
         scope.launch {
@@ -216,10 +232,96 @@ class ChatRoom(
             }
             tempCount += 1
             val id = "temp-$tempCount"
-            messages = messages + Message(id, id, text, System.currentTimeMillis(), true, SendState.Sending, live = true)
+            messages = messages + Message(id, id, text, System.currentTimeMillis(), true, SendState.Sending, live = true, replyTo = replyTo)
             sentCount += 1
-            deliver(id, text, switches)
+            deliver(id, text, switches, replyTo?.id)
         }
+    }
+
+    fun edit(message: Message, text: String) {
+        if (text == message.text || message.temp) return
+        val before = message.text
+        update(message.id) { it.copy(text = text, editedAt = System.currentTimeMillis()) }
+        scope.launch {
+            try {
+                val saved = repository.edit(chatId, message.id, text)
+                update(message.id) { it.copy(text = saved.text, editedAt = saved.editedAt ?: it.editedAt) }
+            } catch (error: ApiError) {
+                update(message.id) { it.copy(text = before, editedAt = message.editedAt) }
+                notice = error.message
+            }
+        }
+    }
+
+    fun pin(message: Message) {
+        val before = pinned
+        pinned = message
+        scope.launch {
+            try {
+                repository.pin(chatId, message.id)?.let { pinned = toMessage(it) }
+            } catch (error: ApiError) {
+                pinned = before
+                notice = error.message
+            }
+        }
+    }
+
+    fun unpin() {
+        val before = pinned ?: return
+        pinned = null
+        scope.launch {
+            try {
+                repository.unpin(chatId)
+            } catch (error: ApiError) {
+                pinned = before
+                notice = error.message
+            }
+        }
+    }
+
+    fun forward(items: List<Message>, targetId: String, targetName: String) {
+        val chosen = items.filter { !it.temp }.sortedBy { it.number }
+        if (chosen.isEmpty()) return
+        scope.launch {
+            try {
+                chosen.forEach { repository.forward(targetId, chatId, it.id) }
+                notice = "Forwarded to $targetName"
+                onChatChanged()
+            } catch (error: ApiError) {
+                notice = error.message
+            }
+        }
+    }
+
+    fun jumpTo(messageId: String) {
+        if (messages.any { it.id == messageId }) {
+            showJump(messageId)
+            return
+        }
+        val target = messageId.toLongOrNull() ?: return
+        scope.launch {
+            try {
+                val olderCall = scope.async { repository.messagesBefore(chatId, target + 1) }
+                val newer = repository.messagesAfter(chatId, target)
+                val older = olderCall.await()
+                if (older.none { it.id == messageId }) {
+                    notice = "Message not found"
+                    return@launch
+                }
+                messages = (older + newer).distinctBy { it.id }.map(::toMessage).sortedBy { it.number }
+                hasMore = older.size == MESSAGE_PAGE_SIZE
+                hasNewer = newer.size == MESSAGE_PAGE_SIZE
+                askStats()
+                showJump(messageId, reloaded = true)
+            } catch (error: ApiError) {
+                notice = error.message
+            }
+        }
+    }
+
+    private fun showJump(messageId: String, reloaded: Boolean = false) {
+        jumpCount += 1
+        jump = Jump(messageId, jumpCount, reloaded)
     }
 
     fun editPost(messageId: String, text: String, switches: PostSwitches) {
@@ -286,7 +388,7 @@ class ChatRoom(
 
     fun resend(message: Message) {
         update(message.id) { it.copy(state = SendState.Sending) }
-        scope.launch { deliver(message.id, message.text, if (isChannel) PostSwitches() else null) }
+        scope.launch { deliver(message.id, message.text, if (isChannel) PostSwitches() else null, message.replyTo?.id) }
     }
 
     fun delete(message: Message) {
@@ -356,9 +458,9 @@ class ChatRoom(
         unreadFromId = newer.firstOrNull { it.senderId != userId }?.id
     }
 
-    private suspend fun deliver(tempId: String, text: String, switches: PostSwitches?) {
+    private suspend fun deliver(tempId: String, text: String, switches: PostSwitches?, replyToId: String? = null) {
         try {
-            val saved = toMessage(repository.send(chatId, text, switches))
+            val saved = toMessage(repository.send(chatId, text, switches, replyToId))
             messages = messages
                 .filterNot { it.id == saved.id }
                 .map { if (it.id == tempId) saved.copy(key = it.key, live = true) else it }
@@ -384,9 +486,26 @@ class ChatRoom(
             "message.new" -> receive(repository.toMessage(data))
             "message.edited" -> {
                 val edited = repository.toMessage(data)
-                update(edited.id) { it.copy(text = edited.text) }
+                messages = messages.map { message ->
+                    val reply = message.replyTo
+                    when {
+                        message.id == edited.id -> message.copy(text = edited.text, editedAt = edited.editedAt)
+                        reply?.id == edited.id -> message.copy(replyTo = reply.copy(text = edited.text))
+                        else -> message
+                    }
+                }
+                if (pinned?.id == edited.id) pinned = pinned?.copy(text = edited.text, editedAt = edited.editedAt)
             }
-            "message.deleted" -> drop(data.optString("id"))
+            "message.deleted" -> {
+                val id = data.optString("id")
+                drop(id)
+                messages = messages.map { message ->
+                    val reply = message.replyTo
+                    if (reply?.id == id) message.copy(replyTo = reply.copy(deleted = true, text = "")) else message
+                }
+                if (pinned?.id == id) pinned = null
+            }
+            "message.pinned" -> pinned = data.optJSONObject("message")?.let { toMessage(repository.toMessage(it)) }
             "message.read" -> {
                 val upTo = data.optString("upToMessageId").toLongOrNull() ?: return
                 if (data.optString("userId") != userId && upTo > peerReadId) peerReadId = upTo
@@ -467,5 +586,10 @@ class ChatRoom(
         state = SendState.Sent,
         senderId = message.senderId,
         senderName = message.senderName,
+        editedAt = message.editedAt,
+        replyTo = message.replyTo,
+        forwardedFrom = message.forwardedFrom,
     )
 }
+
+data class Jump(val messageId: String, val count: Int, val reloaded: Boolean)

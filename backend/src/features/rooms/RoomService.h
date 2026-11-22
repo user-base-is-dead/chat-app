@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -56,8 +57,11 @@ class RoomService
                                          int64_t deviceId,
                                          std::string ciphertext,
                                          bool allowReactions = true,
-                                         bool allowComments = true);
+                                         bool allowComments = true,
+                                         messages::Extras extras = {});
     drogon::Task<messages::Message> edit(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId, std::string ciphertext);
+    drogon::Task<messages::Message> pinMessage(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId);
+    drogon::Task<> unpinMessage(int64_t chatId, RoomAccess room, int64_t userId);
     drogon::Task<> deleteMessage(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId);
     drogon::Task<> markRead(int64_t chatId, RoomAccess room, int64_t userId, int64_t messageId);
 
@@ -70,6 +74,7 @@ class RoomService
     drogon::Task<> validate(RoomFields &fields, int64_t chatId, int64_t userId, int64_t currentPhotoId);
     drogon::Task<AddResult> addAll(int64_t chatId, RoomAccess room, int64_t userId, std::vector<int64_t> ids);
     drogon::Task<> broadcast(int64_t chatId, std::string event, Json::Value data);
+    drogon::Task<> announcePin(int64_t chatId, const RoomAccess &room, const std::optional<messages::Message> &message);
     drogon::Task<> broadcastPost(int64_t chatId, int64_t senderId, std::string event, Json::Value data);
 
     RoomRepository rooms_;

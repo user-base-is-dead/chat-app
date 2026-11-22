@@ -27,6 +27,10 @@ class ChatController : public drogon::HttpController<ChatController>
     ADD_METHOD_TO(ChatController::edit, "/v1/chats/{1}/messages/{2}", drogon::Patch, "core::auth::AuthFilter");
     ADD_METHOD_TO(ChatController::deleteMessage, "/v1/chats/{1}/messages/{2}", drogon::Delete, "core::auth::AuthFilter");
     ADD_METHOD_TO(ChatController::markRead, "/v1/chats/{1}/read", drogon::Post, "core::auth::AuthFilter");
+    ADD_METHOD_TO(ChatController::pinned, "/v1/chats/{1}/pinned", drogon::Get, "core::auth::AuthFilter");
+    ADD_METHOD_TO(ChatController::pinMessage, "/v1/chats/{1}/pinned", drogon::Put, "core::auth::AuthFilter");
+    ADD_METHOD_TO(ChatController::unpinMessage, "/v1/chats/{1}/pinned", drogon::Delete, "core::auth::AuthFilter");
+    ADD_METHOD_TO(ChatController::place, "/v1/chats/{1}/place", drogon::Get, "core::auth::AuthFilter");
     METHOD_LIST_END
 
     drogon::Task<drogon::HttpResponsePtr> list(drogon::HttpRequestPtr request);
@@ -46,6 +50,10 @@ class ChatController : public drogon::HttpController<ChatController>
                                                         std::string chatId,
                                                         std::string messageId);
     drogon::Task<drogon::HttpResponsePtr> markRead(drogon::HttpRequestPtr request, std::string chatId);
+    drogon::Task<drogon::HttpResponsePtr> pinned(drogon::HttpRequestPtr request, std::string chatId);
+    drogon::Task<drogon::HttpResponsePtr> pinMessage(drogon::HttpRequestPtr request, std::string chatId);
+    drogon::Task<drogon::HttpResponsePtr> unpinMessage(drogon::HttpRequestPtr request, std::string chatId);
+    drogon::Task<drogon::HttpResponsePtr> place(drogon::HttpRequestPtr request, std::string chatId);
 
   private:
     ChatService service_;

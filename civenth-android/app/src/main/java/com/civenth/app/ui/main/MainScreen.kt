@@ -101,6 +101,7 @@ import com.civenth.app.data.Chat
 import com.civenth.app.data.User
 import com.civenth.app.data.roomLabel
 import com.civenth.app.ui.chat.ChatScreen
+import com.civenth.app.ui.chat.ForwardOptions
 import com.civenth.app.ui.chats.ChatAction
 import com.civenth.app.ui.chats.ChatsScreen
 import com.civenth.app.ui.chats.ChatsViewModel
@@ -456,6 +457,13 @@ fun MainScreen(
                 } else {
                     null
                 },
+                forward = ForwardOptions(
+                    chats = model.active.filter { !it.peerDeleted && !it.peerDisabled },
+                    groups = model.groups.filter { it.status == "active" },
+                    channels = model.channels.filter { it.status == "active" && it.canSend },
+                    channelLists = model.channelLists,
+                    loadChannels = model::loadChannels,
+                ),
             )
         }
     }
