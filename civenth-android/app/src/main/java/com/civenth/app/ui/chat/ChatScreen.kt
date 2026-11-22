@@ -266,6 +266,7 @@ fun ChatScreen(
     val selecting = selection.isNotEmpty()
     var skipTap by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
+    var failedMenu by remember(room) { mutableStateOf<String?>(null) }
     val canDeleteMessage: (Message) -> Boolean = { message ->
         message.mine || !chat.isRoom ||
             ((channelPermissions?.contains("deleteMessages") ?: chat.can("deleteMessages")) &&
@@ -397,7 +398,10 @@ fun ChatScreen(
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { offset ->
                                         val index = indexAt(offset.y)
-                                        if (index != null && currentRows.getOrNull(index) is MessageRow) {
+                                        val held = (currentRows.getOrNull(index ?: -1) as? MessageRow)?.message
+                                        if (held != null && !selecting && held.mine && held.state == SendState.Failed) {
+                                            failedMenu = held.key
+                                        } else if (index != null && currentRows.getOrNull(index) is MessageRow) {
                                             anchor = index
                                             base = selection
                                             skipTap = true
@@ -468,6 +472,8 @@ fun ChatScreen(
                                             if (message.temp) room.delete(message)
                                             else confirm = Confirm.DeleteMessage(message)
                                         },
+                                        askMenu = failedMenu == message.key,
+                                        onMenuAsked = { failedMenu = null },
                                     )
                                 } else MessageBubble(
                                     message = message,

@@ -131,13 +131,12 @@ fun FloatingDay(label: String) {
 }
 
 @Composable
-private fun GroupTick(state: SendState) {
-    val icon = if (state == SendState.Sending) R.drawable.ic_clock else R.drawable.ic_failed
+private fun FailedMark(onClick: () -> Unit) {
     Icon(
-        painter = painterResource(icon),
-        contentDescription = if (state == SendState.Sending) "Sending" else "Not sent",
-        tint = if (state == SendState.Failed) Danger else InkMuted,
-        modifier = Modifier.size(if (state == SendState.Sending) 13.dp else 16.dp),
+        painter = painterResource(R.drawable.ic_failed),
+        contentDescription = "Not sent",
+        tint = Danger,
+        modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).padding(2.dp).size(18.dp),
     )
 }
 
@@ -159,8 +158,15 @@ fun GroupMessage(
     onCopy: () -> Unit,
     onResend: () -> Unit,
     onDelete: () -> Unit,
+    askMenu: Boolean = false,
+    onMenuAsked: () -> Unit = {},
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(askMenu) {
+        if (!askMenu) return@LaunchedEffect
+        menuOpen = true
+        onMenuAsked()
+    }
     var flash by remember(message.key, selected) { mutableStateOf(0) }
     val shadow = remember(message.key, selected) { Animatable(0f) }
     LaunchedEffect(shadow, flash) {
@@ -175,7 +181,8 @@ fun GroupMessage(
     val picking by animateFloatAsState(if (selecting) 1f else 0f, tween(160), label = "picking")
     val name = if (mine) selfName else message.senderName.ifEmpty { peerName.ifEmpty { "Deleted Account" } }
     val photo = if (mine) selfPhoto else peerPhoto
-    val pending = mine && message.state != SendState.Sent
+    val failed = mine && message.state == SendState.Failed
+    val faded by animateFloatAsState(if (mine && message.state != SendState.Sent) 0.45f else 1f, tween(220), label = "faded")
     val time = remember(message.createdAt) { formatDateTime(message.createdAt) }
     Box(
         modifier = Modifier
@@ -250,13 +257,13 @@ fun GroupMessage(
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = message.text,
-                        color = if (message.state == SendState.Sending) InkMuted else Ink,
+                        color = Ink.copy(alpha = faded),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Normal,
                         lineHeight = 26.sp,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (pending) Box(modifier = Modifier.padding(bottom = 4.dp)) { GroupTick(message.state) }
+                    if (failed) Box(modifier = Modifier.padding(bottom = 2.dp)) { FailedMark { menuOpen = true } }
                 }
             }
         }
