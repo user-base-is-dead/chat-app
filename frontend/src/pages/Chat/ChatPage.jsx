@@ -157,8 +157,8 @@ const fromChannel = (channel) => ({
     lastMessage: channel.lastMessage,
 })
 
-async function loadAll(previous = []) {
-    const [chats, rooms] = await Promise.all([listChats(), listRooms()])
+async function loadAll(previous = [], onResponse) {
+    const [chats, rooms] = await Promise.all([listChats(onResponse), listRooms(onResponse)])
     const counts = new Map(previous.map((chat) => [chat.id, chat.onlineCount]))
     const groups = rooms.map((room) => ({ onlineCount: counts.get(room.id), ...toRoom(room) }))
     const byId = new Map(groups.map((group) => [group.id, group]))
@@ -232,12 +232,29 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     const readTimers = useRef({})
     const seenRef = useRef(null)
 
-    useEffect(() => {
-        loadAll()
-            .then(setChats)
-            .catch(() => setChats([]))
-            .finally(() => setChatsLoading(false))
+    const [syncStatus, setSyncStatus] = useState('')
+    const listRequest = useRef(0)
+    const syncList = useCallback(async (previous = []) => {
+        const request = ++listRequest.current
+        let phase = 'Loading…'
+        let slow = false
+        const show = () => { if (request === listRequest.current) setSyncStatus(phase) }
+        const timer = setTimeout(() => { slow = true; show() }, 250)
+        try {
+            const result = await loadAll(previous, () => { phase = 'Updating…'; if (slow) show() })
+            if (request === listRequest.current) { setChats(result); setSyncStatus('') }
+        } catch (error) {
+            phase = error.status === 0 ? 'Offline' : 'Sync failed'
+            show()
+        } finally {
+            clearTimeout(timer)
+            if (request === listRequest.current) setChatsLoading(false)
+        }
     }, [])
+    useEffect(() => {
+        syncList()
+        return () => { listRequest.current++ }
+    }, [syncList])
 
     useEffect(() => {
         const key = joinKey(window.location.pathname)
@@ -888,9 +905,7 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
     }
 
     const refreshChats = () => {
-        loadAll(chats)
-            .then(setChats)
-            .catch(() => {})
+        syncList(chats)
     }
 
     const applyMessage = (data, isNew) => {
@@ -1100,6 +1115,8 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                     onUserChange={onUserChange}
                     onAccountGone={onAccountGone}
                     loading={chatsLoading}
+                    syncStatus={syncStatus}
+                    onRetry={refreshChats}
                     chats={activeChats}
                     requests={requests}
                     restricted={restricted}

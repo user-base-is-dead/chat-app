@@ -24,7 +24,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.ripple
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import kotlinx.coroutines.delay
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +67,6 @@ import com.civenth.app.ui.theme.MutedBadge
 import com.civenth.app.ui.theme.MutedIcon
 import com.civenth.app.ui.theme.Panel
 import com.civenth.app.ui.theme.Surface
-import com.civenth.app.ui.theme.pressScale
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -215,19 +219,31 @@ fun ChatRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val source = remember { MutableInteractionSource() }
+    val pressed = source.collectIsPressedAsState()
+    var tapFlash by remember(chat.id) { mutableIntStateOf(0) }
+    LaunchedEffect(tapFlash) {
+        if (tapFlash != 0) {
+            delay(180)
+            tapFlash = 0
+        }
+    }
+    val pressTint = Ink.copy(alpha = 0.18f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
-            .pressScale(source)
             .clip(RoundedCornerShape(18.dp))
             .background(if (selected) Surface else Color.Transparent)
+            .drawBehind { if (pressed.value || tapFlash != 0) drawRect(pressTint) }
             .combinedClickable(
                 interactionSource = source,
                 indication = ripple(),
-                onClick = onClick,
+                onClick = {
+                    tapFlash++
+                    onClick()
+                },
                 onLongClick = onLongPress ?: if (actionsFor == null) null else ({ menuOpen = true }),
             )
             .padding(horizontal = 8.dp, vertical = 9.dp),

@@ -48,7 +48,7 @@ function saveRecent(ids) {
     }
 }
 
-function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, restricted, searchResults, selectedChatId, getLastMessage, search, searchFocus, onSearchChange, onSelectChat, onOpenMessage, onStartChat, onPinChat, onMuteChat, onRestrictChat, onUnrestrictChat, onDeleteChat, onLogout, rooms, knownPeople, roomPinnedCount, onRoomCreated, onOpenRoom, onOpenKey, onLeaveRoom, onDeleteRoom, onAcceptInvite, onDeclineInvite, railGroup, channelList, onSelectGroup, onOpenChannel, onOpenGroupInfo, onChannelsChanged, onNotice }) {
+function Sidebar({ user, onUserChange, onAccountGone, loading, syncStatus, onRetry, chats, requests, restricted, searchResults, selectedChatId, getLastMessage, search, searchFocus, onSearchChange, onSelectChat, onOpenMessage, onStartChat, onPinChat, onMuteChat, onRestrictChat, onUnrestrictChat, onDeleteChat, onLogout, rooms, knownPeople, roomPinnedCount, onRoomCreated, onOpenRoom, onOpenKey, onLeaveRoom, onDeleteRoom, onAcceptInvite, onDeclineInvite, railGroup, channelList, onSelectGroup, onOpenChannel, onOpenGroupInfo, onChannelsChanged, onNotice }) {
     const [activeTab, setActiveTab] = useState('chats')
     const [activeFolder, setActiveFolder] = useState('all')
     const [requestsOpen, setRequestsOpen] = useState(false)
@@ -175,6 +175,8 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
     const title = inRequests ? 'New & Restricted' : titles[activeTab]
     const fullSearch = searchOpen && activeTab === 'chats' && !requestsOpen
     const known = [...chats, ...requests, ...restricted, ...rooms]
+    const pageHeader = !inRequests && activeTab !== 'settings'
+    const retry = syncStatus === 'Offline' || syncStatus === 'Sync failed'
     const recentChats = recentIds.map((id) => known.find((chat) => chat.id === id)).filter(Boolean)
 
     const remember = (chat) => {
@@ -292,7 +294,7 @@ function Sidebar({ user, onUserChange, onAccountGone, loading, chats, requests, 
                                     <BackIcon />
                                 </button>
                             )}
-                            <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : styles.title}>{title}</h1>
+                            <h1 key={title} className={inRequests ? `${styles.title} ${styles.titleSmall}` : pageHeader ? styles.centerTitle : styles.title}>{pageHeader && syncStatus ? (retry ? <button onClick={onRetry}>{syncStatus} · Retry</button> : syncStatus) : title}</h1>
                             {!inRequests && activeTab !== 'settings' && <AlertButtons onOpen={() => setAlertsOpen(true)} />}
                         </div>
                         {selectedChats.length > 0 && (

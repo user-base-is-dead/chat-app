@@ -627,3 +627,10 @@
         animation: none;
     }
 }
+
+.centerTitle { composes: title; }
+.centerTitle button { font: inherit; color: inherit; cursor: pointer; }
+@media (min-width: 769px) {
+    .titleRow:has(.centerTitle) { justify-content: flex-end; }
+    .centerTitle { position: absolute; left: 50%; transform: translateX(-50%); padding: 0; max-width: calc(100% - 96px); animation: none; }
+}

@@ -1,7 +1,7 @@
 import { authorized } from './client'
 
-export function listRooms() {
-    return authorized('/rooms')
+export function listRooms(onResponse) {
+    return authorized('/rooms', { onResponse })
 }
 
 export function createRoom(room) {

@@ -359,7 +359,19 @@ fun ChatScreen(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 if (room.loading) {
-                    CircularProgressIndicator(color = Chroma, modifier = Modifier.align(Alignment.Center))
+                    val pulse = rememberInfiniteTransition(label = "openingChat").animateFloat(
+                        initialValue = 0.05f,
+                        targetValue = 0.16f,
+                        animationSpec = infiniteRepeatable(tween(440), androidx.compose.animation.core.RepeatMode.Reverse),
+                        label = "loadingShadow",
+                    )
+                    val tint = Ink
+                    CircularProgressIndicator(
+                        color = Chroma,
+                        modifier = Modifier.align(Alignment.Center).drawBehind {
+                            drawCircle(tint.copy(alpha = pulse.value), radius = size.minDimension * 0.8f)
+                        },
+                    )
                 }
                 LazyColumn(
                     state = listState,

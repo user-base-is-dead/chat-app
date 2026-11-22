@@ -10,7 +10,10 @@ import androidx.compose.foundation.shape.CircleShape
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.animation.core.tween
 
@@ -158,6 +161,15 @@ fun GroupMessage(
     onDelete: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    var flash by remember(message.key, selected) { mutableStateOf(0) }
+    val shadow = remember(message.key, selected) { Animatable(0f) }
+    LaunchedEffect(shadow, flash) {
+        if (selected || flash != 0) {
+            shadow.animateTo(0.12f, tween(65))
+            shadow.animateTo(0f, tween(205))
+        }
+    }
+    val shadowColor = Ink
     val mine = message.mine
     val mark by animateFloatAsState(if (selected) 1f else 0f, tween(160), label = "mark")
     val picking by animateFloatAsState(if (selecting) 1f else 0f, tween(160), label = "picking")
@@ -177,22 +189,26 @@ fun GroupMessage(
                 .background(
                     when {
                         focused -> Chroma.copy(alpha = 0.18f)
-                        else -> Chroma.copy(alpha = 0.16f * mark)
+                        else -> Color.Transparent
                     },
                 )
-                .combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { if (selecting) onSelect() },
-                    onLongClick = { if (!selecting) menuOpen = true },
-                )
+                .drawBehind {
+                    if (shadow.value > 0f) drawRect(shadowColor.copy(alpha = shadow.value))
+                }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    when {
+                        selecting -> onSelect()
+                        message.state == SendState.Failed -> menuOpen = true
+                        else -> flash++
+                    }
+                }
                 .padding(horizontal = 8.dp, vertical = 1.dp),
         ) {
             Box(
                 contentAlignment = Alignment.TopCenter,
                 modifier = Modifier
                     .width(40.dp)
-                    .height(if (start) 40.dp else 22.dp),
+                    .height(if (start) 40.dp else 24.dp),
             ) {
                 if (start) {
                     Box(modifier = Modifier.graphicsLayer { alpha = 1f - picking }) {
@@ -210,7 +226,7 @@ fun GroupMessage(
                             .background(Chroma.copy(alpha = mark))
                             .border(1.6.dp, lerp(InkMuted, Chroma, mark), CircleShape),
                     ) {
-                        if (selected) Icon(painterResource(R.drawable.ic_tick), null, tint = Color.White, modifier = Modifier.size(15.dp))
+                        Icon(painterResource(R.drawable.ic_tick), null, tint = Color.White, modifier = Modifier.size(15.dp).graphicsLayer { alpha = mark; scaleX = 0.8f + 0.2f * mark; scaleY = scaleX })
                     }
                 }
             }
@@ -232,21 +248,19 @@ fun GroupMessage(
                     Spacer(modifier = Modifier.height(2.dp))
                 }
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SelectionContainer {
-                        Text(
-                            text = message.text,
-                            color = if (message.state == SendState.Sending) InkMuted else Ink,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            lineHeight = 22.sp,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
+                    Text(
+                        text = message.text,
+                        color = if (message.state == SendState.Sending) InkMuted else Ink,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Normal,
+                        lineHeight = 26.sp,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     if (pending) Box(modifier = Modifier.padding(bottom = 4.dp)) { GroupTick(message.state) }
                 }
             }
         }
-        if (menuOpen && !selecting) DropdownMenu(
+        if (menuOpen && !selecting && message.state == SendState.Failed) DropdownMenu(
             expanded = true,
             onDismissRequest = { menuOpen = false },
             shape = RoundedCornerShape(18.dp),

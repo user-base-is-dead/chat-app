@@ -131,7 +131,7 @@ fun ChatsScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 Box {
                     Box(modifier = Modifier.alpha(if (selectedIds.isEmpty()) 1f else 0f)) {
-                        ScreenTitle("Chats", model.unreadChats)
+                        ScreenTitle("Chats", model, model.unreadChats)
                     }
                     if (selectedIds.isNotEmpty()) {
                         ChatSelectionBar(
@@ -216,26 +216,18 @@ fun SearchResults(
 }
 
 @Composable
-fun ScreenTitle(title: String, count: Int = 0) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, top = 14.dp, end = 16.dp, bottom = 12.dp),
-    ) {
-        Text(text = title, color = DockAccent, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
-        if (count > 0) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(DockPill)
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
-            ) {
-                Text(formatCount(count), color = DockAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+fun ScreenTitle(title: String, model: ChatsViewModel, count: Int = 0) {
+    val label = model.syncLabel
+    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.then(if (label.endsWith("Retry")) Modifier.clickable { model.refreshNow() } else Modifier)) {
+                Text(label.ifEmpty { title }, color = DockAccent, fontSize = if (label.isEmpty()) 28.sp else 20.sp, fontWeight = FontWeight.Bold)
+                if (count > 0 && label.isEmpty()) CountBadge(count)
             }
+            if (!com.civenth.app.update.AppUpdate.available) AppAlerts(Modifier.align(Alignment.CenterEnd))
         }
-        Spacer(modifier = Modifier.weight(1f))
-        AppAlerts()
+        if (com.civenth.app.update.AppUpdate.available) AppAlerts(Modifier.align(Alignment.End))
     }
 }
 

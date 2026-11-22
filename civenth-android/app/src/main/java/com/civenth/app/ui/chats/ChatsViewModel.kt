@@ -394,10 +394,22 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
             .launchIn(viewModelScope)
     }
 
+    private var refreshSequence = 0
+    var syncLabel by mutableStateOf("")
+        private set
+
     private fun refresh() {
+        val request = ++refreshSequence
         viewModelScope.launch {
+            var phase = "Loading…"
+            val statusTimer = launch { kotlinx.coroutines.delay(220); if (request == refreshSequence) syncLabel = phase }
             try {
-                val list = app.chats.list()
+                val list = app.chats.list {
+                    phase = "Updating…"
+                    if (request == refreshSequence && statusTimer.isCompleted) syncLabel = phase
+                }
+                if (request != refreshSequence) return@launch
+                syncLabel = ""
                 all = list
                 failed = false
                 val current = room
@@ -406,9 +418,12 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
                 if (opened != null && openGroupId == null) current?.chatUpdated(opened)
                 list.firstOrNull { it.id == shownGroup?.id && it.status == "active" }?.let { loadChannels(it.id) }
             } catch (error: ApiError) {
+                if (request != refreshSequence) return@launch
+                syncLabel = if (error.status == 0) "Offline · Retry" else "Retry"
                 if (error.status == 401) sessionLost = true else failed = true
             } finally {
-                loading = false
+                statusTimer.cancel()
+                if (request == refreshSequence) loading = false
             }
         }
     }

@@ -22,8 +22,8 @@ export function searchUsers(query) {
     return authorized(`/users/search?q=${encodeURIComponent(query)}`)
 }
 
-export function listChats() {
-    return authorized('/chats')
+export function listChats(onResponse) {
+    return authorized('/chats', { onResponse })
 }
 
 export function openDm(userId) {

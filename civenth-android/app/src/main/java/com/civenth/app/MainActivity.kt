@@ -1,5 +1,7 @@
 package com.civenth.app
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.graphicsLayer
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -40,8 +42,11 @@ import com.civenth.app.update.NotificationsPage
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val launchCount = androidx.compose.runtime.mutableIntStateOf(0)
+
     override fun onStart() {
         super.onStart()
+        launchCount.intValue++
         AppState.visible = true
         lifecycleScope.launch { AppUpdate.check((application as CiventhApp).http) }
     }
@@ -76,10 +81,24 @@ class MainActivity : ComponentActivity() {
                             AppRoot()
                             NotificationsPage()
                         }
+                        androidx.compose.runtime.key(launchCount.intValue) { LaunchLogo() }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LaunchLogo() {
+    val fade = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { fade.animateTo(0f, androidx.compose.animation.core.tween(340, delayMillis = 100)) }
+    if (fade.value > 0f) Box(
+        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground), null,
+            Modifier.size(96.dp).graphicsLayer { scaleX = 1f + (1f - fade.value) * 0.08f; scaleY = scaleX })
     }
 }
 

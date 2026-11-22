@@ -54,7 +54,7 @@ export function accessToken() {
     return readItem(ACCESS_KEY)
 }
 
-export async function send(path, { method = 'GET', body, raw, token } = {}) {
+export async function send(path, { method = 'GET', body, raw, token, onResponse } = {}) {
     const headers = { 'X-App-Platform': APP_PLATFORM, 'X-App-Version': APP_VERSION }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
     if (raw) headers['Content-Type'] = raw.type || 'application/octet-stream'
@@ -71,6 +71,7 @@ export async function send(path, { method = 'GET', body, raw, token } = {}) {
         throw new ApiError(0, 'network', 'Cannot reach the server. Check your connection.')
     }
 
+    if (response.ok) onResponse?.()
     if (response.status === 426) markUpdateRequired()
     if (response.status === 204) return null
     const data = await response.json().catch(() => null)

@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 
 enum class ThemeChoice(val label: String) {
@@ -131,6 +134,7 @@ object Appearance {
 }
 
 private val palette: Palette get() = if (Appearance.dark) darkPalette else lightPalette
+private const val APP_SIZE_SCALE = 1.08f
 
 val Chroma: Color get() = Appearance.color.value
 val Canvas: Color get() = lerp(palette.base, Chroma, palette.canvasTint)
@@ -173,6 +177,7 @@ val SoftShadow: Color get() = if (Appearance.dark) Color(0x66000000) else Color(
 @Composable
 fun CiventhTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
+    val density = LocalDensity.current
     val systemDark = isSystemInDarkTheme()
     val dark = Appearance.dark
 
@@ -207,7 +212,11 @@ fun CiventhTheme(content: @Composable () -> Unit) {
             error = Danger,
         )
     }
-    MaterialTheme(colorScheme = scheme, content = content)
+    CompositionLocalProvider(
+        LocalDensity provides Density(density.density * APP_SIZE_SCALE, density.fontScale),
+    ) {
+        MaterialTheme(colorScheme = scheme, content = content)
+    }
 }
 
 private val roleLight = mapOf(

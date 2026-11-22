@@ -73,7 +73,7 @@ fun RoomsScreen(
     val invites = rooms.filter { it.status == "request" }
     val joined = rooms.filter { it.status == "active" }
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTitle(title)
+        ScreenTitle(title, model)
         SearchBox(model.search, "Search your ${title.lowercase()}") { model.search = it }
         when {
             model.search.isNotBlank() -> SearchResults(model, bottomSpace, onOpenChat, onOpenMessage, kind)

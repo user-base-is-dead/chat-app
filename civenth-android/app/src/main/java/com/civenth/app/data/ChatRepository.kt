@@ -60,8 +60,9 @@ data class Person(
 )
 
 class ChatRepository(private val api: ApiClient) {
-    suspend fun list(): List<Chat> {
+    suspend fun list(onResponse: () -> Unit = {}): List<Chat> {
         val items = api.authorizedList("/chats")
+        onResponse()
         val rooms = api.authorizedList("/rooms")
         return List(items.length()) { items.getJSONObject(it).toChat() } +
             List(rooms.length()) { toRoom(rooms.getJSONObject(it)) }
