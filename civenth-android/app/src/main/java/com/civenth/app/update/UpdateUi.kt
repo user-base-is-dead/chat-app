@@ -38,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -65,22 +67,46 @@ internal fun UpdateButton(label: String, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val http = (context.applicationContext as CiventhApp).http
     val busy = AppUpdate.download == DownloadState.Downloading
+    val filled by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (busy) AppUpdate.progress else 0f,
+        animationSpec = androidx.compose.animation.core.tween(300),
+        label = "download",
+    )
+    val shine = if (busy) androidx.compose.animation.core.rememberInfiniteTransition(label = "sweep").animateFloat(
+        initialValue = -0.4f,
+        targetValue = 1.4f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1400)),
+        label = "shine",
+    ) else null
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .clip(CircleShape)
-            .background(if (busy) SurfaceStrong else Chroma)
+            .background(if (busy) Chroma.copy(alpha = 0.45f) else Chroma)
+            .drawBehind {
+                if (shine == null) return@drawBehind
+                drawRect(Chroma, size = androidx.compose.ui.geometry.Size(size.width * filled, size.height))
+                val band = size.width * 0.4f
+                val x = size.width * shine.value
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.22f), Color.Transparent),
+                        startX = x - band,
+                        endX = x + band,
+                    ),
+                )
+            }
             .pressClickable(enabled = !busy) { scope.launch { AppUpdate.start(context, http) } }
             .padding(horizontal = 18.dp, vertical = 10.dp),
     ) {
         Text(
             text = when (AppUpdate.download) {
-                DownloadState.Downloading -> "Downloading ${(AppUpdate.progress * 100).toInt()}%"
+                DownloadState.Downloading -> "${(AppUpdate.progress * 100).toInt()}%"
                 DownloadState.Ready -> "Install"
                 DownloadState.Failed -> "Try again"
                 DownloadState.Idle -> label
             },
-            color = if (busy) InkMuted else Color.White,
+            color = Color.White,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
         )
