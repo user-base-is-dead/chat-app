@@ -11,15 +11,13 @@ function ChatWelcome({ name }) {
                 <p className={styles.hint}>Select a chat to start messaging</p>
             </div>
             <div className={styles.info}>
-                <span className={styles.badge}>
+                <span className={styles.label}>
                     <LockIcon />
+                    Private by design
                 </span>
-                <div className={styles.infoText}>
-                    <h2 className={styles.title}>Civenth</h2>
-                    <ul className={styles.points}>
-                        <li>Every message is end-to-end encrypted. Only you and the person you're talking to can read it.</li>
-                        <li>We never share your data with any government or third party.</li>
-                    </ul>
+                <div className={styles.facts}>
+                    <p>Only you and the person you're talking to can read your messages. End-to-end encrypted, always.</p>
+                    <p>Nothing you send is shared with any government or third party.</p>
                 </div>
             </div>
         </div>

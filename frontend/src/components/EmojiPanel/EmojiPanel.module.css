@@ -1,6 +1,6 @@
 .panel {
     position: absolute;
-    right: 0;
+    left: 0;
     bottom: calc(100% + 8px);
     width: 380px;
     max-width: 100%;
@@ -14,7 +14,7 @@
     box-shadow: var(--shadow-lift);
     overflow: hidden;
     z-index: 20;
-    transform-origin: bottom right;
+    transform-origin: bottom left;
     animation: panelIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -149,11 +149,6 @@
 
 .emoji:hover {
     background: var(--surface);
-    transform: scale(1.12);
-}
-
-.emoji:active {
-    transform: scale(0.9);
 }
 
 .empty {

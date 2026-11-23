@@ -50,9 +50,58 @@
 
 :global([data-theme="dark"]) .morePanel { background: white; color: black; }
 
-.morePanel[open] { display: grid; place-content: center; gap: 14px; }
-.morePanel h1 { margin: 0; font-size: 44px; font-weight: 800; }
-.morePanel p { margin: 0; font-size: 17px; opacity: 0.82; }
+.morePanel[open] { display: flex; flex-direction: column; align-items: center; }
+@media (max-width: 768px) { .morePanel { padding: 32px 20px; } }
+.brand {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+.brand img { width: 34px; height: 34px; border-radius: 10px; }
+.menuOptions {
+    width: 100%;
+    max-width: 620px;
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+}
+.menuOption {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 4px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.optionNumber { align-self: flex-start; padding-top: 8px; font-size: 13px; font-weight: 700; opacity: 0.5; font-variant-numeric: tabular-nums; }
+.optionName { flex: 1; min-width: 0; font-size: clamp(30px, 8.4vw, 52px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; }
+.optionEnd { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+.optionEnd svg { width: 22px; height: 22px; color: black; }
+:global([data-theme="dark"]) .optionEnd svg { color: white; }
+.soonTag {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.optionSoon { cursor: default; }
+.optionSoon .optionName, .optionSoon .optionNumber { opacity: 0.4; }
+.optionSoon .soonTag { opacity: 0.6; }
 .closeMenu {
     -webkit-user-select: none;
     user-select: none;

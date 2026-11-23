@@ -1480,6 +1480,10 @@ function ChatPage({ user, onLogout, onUserChange, onAccountGone }) {
                         ) : (
                             <>
                                 <MessageInput
+                                    onMic={() => showToast('Voice messages are coming soon')}
+                                    onAttach={() => showToast('Attachments are coming soon')}
+                                    onEscrow={() => showToast('Escrow mode is coming soon')}
+                                    onCamera={() => showToast('Camera is coming soon')}
                                     placeholder={channelId ? 'Broadcast' : 'Message'}
                                     clearKey={inputClear}
                                     onSend={handleSend}

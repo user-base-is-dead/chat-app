@@ -5,6 +5,12 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +41,6 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,27 +93,78 @@ fun MenuScreen() {
             }
             .background(if (dark) Color.White else Color.Black),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+        val brand = stage(progress.value, 0.4f)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset { IntOffset(0, (origin.y - 17.dp.toPx()).roundToInt()) }
+                .graphicsLayer {
+                    alpha = brand
+                    translationY = (1f - brand) * -24.dp.toPx()
+                },
         ) {
-            listOf(
-                Triple("Coming soon", 44.sp, FontWeight.ExtraBold),
-                Triple("New options will show up here.", 17.sp, FontWeight.Medium),
-            ).forEachIndexed { index, (text, size, weight) ->
-                val shown = stage(progress.value, 0.45f + index * 0.12f)
-                Text(
-                    text = text,
-                    color = foreground.copy(alpha = if (index == 0) 1f else 0.82f),
-                    fontSize = size,
-                    fontWeight = weight,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = shown
-                        translationY = (1f - shown) * 48.dp.toPx()
-                    },
-                )
+            Image(painterResource(R.drawable.logo), null, modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)))
+            Text("Civenth", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+        }
+        Column(
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 20.dp),
+        ) {
+            val line = foreground.copy(alpha = 0.16f)
+            listOf("Chat" to true, "Crypto Cold Wallet" to false, "Buy & Sell" to false).forEachIndexed { index, (name, ready) ->
+                val shown = stage(progress.value, 0.42f + index * 0.1f)
+                if (index == 0) Box(Modifier.fillMaxWidth(shown).height(1.dp).background(line))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = shown
+                            translationY = (1f - shown) * 40.dp.toPx()
+                        }
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = ready, onClick = close)
+                        .padding(vertical = 20.dp, horizontal = 4.dp),
+                ) {
+                    val dim = if (ready) 1f else 0.4f
+                    Text(
+                        text = (index + 1).toString().padStart(2, '0'),
+                        color = foreground.copy(alpha = 0.5f * dim),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Top).padding(top = 6.dp),
+                    )
+                    Text(
+                        text = name,
+                        color = foreground.copy(alpha = dim),
+                        fontSize = 32.sp,
+                        lineHeight = 34.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.8).sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (ready) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.size(42.dp).clip(CircleShape).background(foreground),
+                        ) {
+                            Icon(painterResource(R.drawable.ic_chevron), null, tint = if (dark) Color.White else Color.Black, modifier = Modifier.size(20.dp))
+                        }
+                    } else {
+                        Text(
+                            text = "SOON",
+                            color = foreground.copy(alpha = 0.6f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.7.sp,
+                            modifier = Modifier
+                                .border(1.dp, foreground.copy(alpha = 0.35f), CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                        )
+                    }
+                }
+                Box(Modifier.fillMaxWidth(shown).height(1.dp).background(line))
             }
         }
         val turn = stage(progress.value, 0.3f, 0.5f)

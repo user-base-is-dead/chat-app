@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import styles from './MessageInput.module.css'
 import SendIcon from '../Icons/SendIcon'
 import AttachIcon from '../Icons/AttachIcon'
-import EmojiIcon from '../Icons/EmojiIcon'
+import StickerIcon from '../Icons/StickerIcon'
+import EscrowIcon from '../Icons/EscrowIcon'
+import CameraIcon from '../Icons/CameraIcon'
+import MicIcon from '../Icons/MicIcon'
 import EmojiPanel from '../EmojiPanel/EmojiPanel'
 
-function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping, focusNow, onFocused, strip, draft }) {
+function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping, focusNow, onFocused, strip, draft, onMic, onAttach, onEscrow, onCamera }) {
     const [text, setText] = useState('')
     const [clearedKey, setClearedKey] = useState(clearKey)
     const [draftKey, setDraftKey] = useState(draft?.key ?? null)
@@ -136,29 +139,49 @@ function MessageInput({ placeholder = 'Message', clearKey = 0, onSend, onTyping,
                 />
             )}
             {strip}
-            <form className={styles.bar} onSubmit={handleSubmit}>
-                <button className={styles.iconButton} type="button" aria-label="Attach">
-                    <AttachIcon />
-                </button>
-                <input ref={inputRef} className={styles.input} type="text" placeholder={placeholder} value={text} onChange={(e) => {
-                    setText(e.target.value)
-                    if (e.target.value.trim()) onTyping?.()
-                }} />
-                <button
-                    ref={emojiButtonRef}
-                    className={emojiOpen ? `${styles.emojiButton} ${styles.emojiButtonActive}` : styles.emojiButton}
-                    type="button"
-                    aria-label="Emoji"
-                    aria-expanded={emojiOpen}
-                    onClick={handleEmojiClick}
-                    onPointerEnter={handleHoverEnter}
-                    onPointerLeave={handleHoverLeave}
-                >
-                    <EmojiIcon />
-                </button>
-                <button className={text.trim() ? `${styles.sendButton} ${styles.sendReady}` : styles.sendButton} type="submit" aria-label="Send">
-                    <SendIcon />
-                </button>
+            <form className={styles.row} onSubmit={handleSubmit}>
+                <div className={styles.bar}>
+                    <button
+                        ref={emojiButtonRef}
+                        className={emojiOpen ? `${styles.emojiButton} ${styles.emojiButtonActive}` : styles.emojiButton}
+                        type="button"
+                        aria-label="Emoji"
+                        aria-expanded={emojiOpen}
+                        onClick={handleEmojiClick}
+                        onPointerEnter={handleHoverEnter}
+                        onPointerLeave={handleHoverLeave}
+                    >
+                        <StickerIcon />
+                    </button>
+                    <input ref={inputRef} className={styles.input} type="text" placeholder={placeholder} value={text} onChange={(e) => {
+                        setText(e.target.value)
+                        if (e.target.value.trim()) onTyping?.()
+                    }} />
+                    {onAttach && (
+                        <button className={styles.iconButton} type="button" aria-label="Attach" onClick={onAttach}>
+                            <AttachIcon />
+                        </button>
+                    )}
+                    {onEscrow && (
+                        <button className={styles.iconButton} type="button" aria-label="Escrow mode" onClick={onEscrow}>
+                            <EscrowIcon />
+                        </button>
+                    )}
+                    {onCamera && (
+                        <button className={styles.iconButton} type="button" aria-label="Camera" onClick={onCamera}>
+                            <CameraIcon />
+                        </button>
+                    )}
+                </div>
+                {onMic && !text.trim() ? (
+                    <button className={styles.sendButton} type="button" aria-label="Record voice message" onClick={onMic}>
+                        <MicIcon />
+                    </button>
+                ) : (
+                    <button className={styles.sendButton} type="submit" aria-label="Send">
+                        <SendIcon />
+                    </button>
+                )}
             </form>
         </div>
     )

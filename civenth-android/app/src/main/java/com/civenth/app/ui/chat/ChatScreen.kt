@@ -697,6 +697,9 @@ fun ChatScreen(
                             }
                         },
                         onAttach = { Toast.makeText(context, "Attachments coming soon", Toast.LENGTH_SHORT).show() },
+                        onMic = { Toast.makeText(context, "Voice messages coming soon", Toast.LENGTH_SHORT).show() },
+                        onEscrow = { Toast.makeText(context, "Escrow mode coming soon", Toast.LENGTH_SHORT).show() },
+                        onCamera = { Toast.makeText(context, "Camera coming soon", Toast.LENGTH_SHORT).show() },
                         placeholder = if (channel) "Broadcast" else "Message",
                         clearKey = inputClear,
                         strip = inputMode?.let { mode -> { InputStrip(mode, nameOf(mode.message), onClose = closeMode) } },

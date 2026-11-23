@@ -413,7 +413,10 @@ private fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .pressClickable(onClick = onClick)
+            .then(
+                if (trailing == null) Modifier.pressClickable(onClick = onClick)
+                else Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+            )
             .padding(horizontal = 8.dp, vertical = 8.dp),
     ) {
         Box(

@@ -142,6 +142,7 @@ val Panel: Color get() = lerp(palette.sheet, Chroma, palette.sheetTint)
 val Card: Color get() = Panel
 val Surface: Color get() = lerp(palette.raised, Chroma, palette.surfaceTint)
 val SurfaceStrong: Color get() = if (Appearance.dark) Color(0xFF45443F) else Color(0xFFDDD7CB)
+val SwitchOff: Color get() = if (Appearance.dark) Color(0xFF5F5D57) else Color(0xFFBDB4A5)
 val Ink: Color get() = palette.ink
 val InkMuted: Color get() = palette.inkMuted
 val MutedIcon: Color get() = palette.mutedIcon

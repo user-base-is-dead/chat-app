@@ -62,9 +62,7 @@ import com.civenth.app.ui.theme.BorderStrong
 import com.civenth.app.ui.theme.Chroma
 import com.civenth.app.ui.theme.Ink
 import com.civenth.app.ui.theme.InkMuted
-import com.civenth.app.ui.theme.MutedIcon
 import com.civenth.app.ui.theme.Panel
-import com.civenth.app.ui.theme.Surface
 import com.civenth.app.ui.theme.bouncySpring
 import com.civenth.app.ui.theme.pressScale
 import com.civenth.app.ui.theme.softSpring
@@ -114,6 +112,9 @@ fun InputBar(
     clearKey: Int = 0,
     strip: (@Composable () -> Unit)? = null,
     draft: InputDraft? = null,
+    onMic: (() -> Unit)? = null,
+    onEscrow: (() -> Unit)? = null,
+    onCamera: (() -> Unit)? = null,
 ) {
     var value by remember { mutableStateOf(TextFieldValue("")) }
     var clearedKey by remember { mutableStateOf(clearKey) }
@@ -141,11 +142,8 @@ fun InputBar(
     }
     val ready = value.text.isNotBlank()
     val sendSource = remember { MutableInteractionSource() }
-    val sendScale by animateFloatAsState(if (ready) 1f else 0.9f, bouncySpring(), label = "sendScale")
-    val sendTurn by animateFloatAsState(if (ready) 0f else -35f, bouncySpring(), label = "sendTurn")
-    val sendMix by animateFloatAsState(if (ready) 1f else 0f, label = "sendMix")
-    val sendColor = androidx.compose.ui.graphics.lerp(Surface, Chroma, sendMix)
-    val sendTint = androidx.compose.ui.graphics.lerp(MutedIcon, Color.White, sendMix)
+    val showSend = ready || onMic == null
+    val sendTurn by animateFloatAsState(if (showSend) 0f else 1f, bouncySpring(), label = "sendTurn")
     val closeForKeyboard = {
         if (emojiOpen) {
             emojiOpen = false
@@ -187,10 +185,16 @@ fun InputBar(
     }
 
     Column {
-        Column(
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .padding(start = 8.dp, end = 8.dp, bottom = 6.dp)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+        ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
                 .shadow(4.dp, BarShape, ambientColor = SoftShadow, spotColor = SoftShadow)
                 .clip(BarShape)
                 .background(com.civenth.app.ui.theme.SurfaceStrong)
@@ -201,7 +205,21 @@ fun InputBar(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            BarButton(R.drawable.ic_attach, "Attach", active = false, onClick = onAttach)
+            BarButton(
+                icon = if (emojiOpen) R.drawable.ic_keyboard else R.drawable.ic_sticker,
+                label = if (emojiOpen) "Keyboard" else "Emoji",
+                active = emojiOpen,
+                onClick = {
+                    if (emojiOpen) {
+                        closeForKeyboard()
+                        focus.requestFocus()
+                        keyboard?.show()
+                    } else {
+                        emojiOpen = true
+                        keyboard?.hide()
+                    }
+                },
+            )
             Box(
                 contentAlignment = Alignment.CenterStart,
                 modifier = Modifier
@@ -231,51 +249,51 @@ fun InputBar(
                         },
                 )
             }
-            BarButton(
-                icon = if (emojiOpen) R.drawable.ic_keyboard else R.drawable.ic_emoji,
-                label = if (emojiOpen) "Keyboard" else "Emoji",
-                active = emojiOpen,
-                onClick = {
-                    if (emojiOpen) {
-                        closeForKeyboard()
-                        focus.requestFocus()
-                        keyboard?.show()
-                    } else {
-                        emojiOpen = true
-                        keyboard?.hide()
+            BarButton(R.drawable.ic_attach, "Attach", active = false, onClick = onAttach)
+            if (onEscrow != null) BarButton(R.drawable.ic_escrow, "Escrow mode", active = false, onClick = onEscrow)
+            if (onCamera != null) BarButton(R.drawable.ic_camera, "Camera", active = false, onClick = onCamera)
+        }
+        }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(48.dp)
+                .pressScale(sendSource, pressed = 0.88f)
+                .shadow(4.dp, CircleShape, ambientColor = SoftShadow, spotColor = SoftShadow)
+                .clip(CircleShape)
+                .background(Chroma)
+                .clickable(interactionSource = sendSource, indication = null) {
+                    when {
+                        ready -> if (onSend(value.text.trim())) value = TextFieldValue("")
+                        onMic != null -> onMic()
                     }
                 },
-            )
-            Box(
-                contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_send),
+                contentDescription = if (showSend) "Send" else null,
+                tint = Color.White,
                 modifier = Modifier
-                    .padding(start = 2.dp)
-                    .size(44.dp)
+                    .padding(start = 3.dp)
+                    .size(23.dp)
                     .graphicsLayer {
-                        scaleX = sendScale
-                        scaleY = sendScale
-                    }
-                    .pressScale(sendSource, pressed = 0.88f)
-                    .clip(CircleShape)
-                    .background(sendColor)
-                    .clickable(interactionSource = sendSource, indication = null, enabled = ready) {
-                        if (onSend(value.text.trim())) value = TextFieldValue("")
+                        alpha = 1f - sendTurn
+                        scaleX = 1f - sendTurn * 0.5f
+                        scaleY = 1f - sendTurn * 0.5f
                     },
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_send),
-                    contentDescription = "Send",
-                    tint = sendTint,
-                    modifier = Modifier
-                        .padding(start = 3.dp)
-                        .size(21.dp)
-                        .graphicsLayer {
-                            rotationZ = sendTurn
-                            scaleX = sendScale
-                            scaleY = sendScale
-                        },
-                )
-            }
+            )
+            Icon(
+                painter = painterResource(R.drawable.ic_mic),
+                contentDescription = if (showSend) null else "Record voice message",
+                tint = Color.White,
+                modifier = Modifier
+                    .size(24.dp)
+                    .graphicsLayer {
+                        alpha = sendTurn
+                        scaleX = 0.5f + sendTurn * 0.5f
+                        scaleY = 0.5f + sendTurn * 0.5f
+                    },
+            )
         }
         }
         if (emojiOpen || keyboardRising) {
@@ -317,6 +335,6 @@ private fun BarButton(icon: Int, label: String, active: Boolean, onClick: () -> 
             .background(if (active) Chroma.copy(alpha = 0.11f) else Color.Transparent)
             .clickable(interactionSource = source, indication = null, onClick = onClick),
     ) {
-        Icon(painterResource(icon), label, tint = if (active) Chroma else InkMuted)
+        Icon(painterResource(icon), label, tint = if (active) Chroma else androidx.compose.ui.graphics.lerp(InkMuted, Ink, 0.5f))
     }
 }

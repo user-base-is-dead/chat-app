@@ -7,12 +7,20 @@ import ChatsIcon from '../Icons/ChatsIcon'
 import GroupsIcon from '../Icons/GroupsIcon'
 import ChannelsIcon from '../Icons/ChannelsIcon'
 import SettingsIcon from '../Icons/SettingsIcon'
+import ChevronIcon from '../Icons/ChevronIcon'
+import logo from '../../assets/logo.png'
 
 const tabs = [
     { id: 'chats', label: 'Chats', Icon: ChatsIcon },
     { id: 'groups', label: 'Groups', Icon: GroupsIcon },
     { id: 'channels', label: 'Channels', Icon: ChannelsIcon },
     { id: 'settings', label: 'Settings', Icon: SettingsIcon },
+]
+
+const menuOptions = [
+    { name: 'Chat', ready: true },
+    { name: 'Crypto Cold Wallet', ready: false },
+    { name: 'Buy & Sell', ready: false },
 ]
 
 export function MoreMenu({ className = styles.more }) {
@@ -33,8 +41,23 @@ export function MoreMenu({ className = styles.more }) {
             </button>
             <dialog ref={menu} className={styles.morePanel} aria-labelledby={titleId}>
                 <button type="button" className={styles.closeMenu} aria-label="Close" onClick={() => menu.current.close()}><CloseIcon /></button>
-                <h1 id={titleId}>Coming soon</h1>
-                <p>New options will show up here.</p>
+                <h1 id={titleId} className={styles.brand}><img src={logo} alt="" />Civenth</h1>
+                <div className={styles.menuOptions}>
+                    {menuOptions.map(({ name, ready }, index) => (
+                        <button
+                            key={name}
+                            type="button"
+                            className={[styles.menuOption, !ready && styles.optionSoon].filter(Boolean).join(' ')}
+                            aria-current={ready ? 'page' : undefined}
+                            aria-disabled={ready ? undefined : 'true'}
+                            onClick={ready ? () => menu.current.close() : undefined}
+                        >
+                            <span className={styles.optionNumber}>{String(index + 1).padStart(2, '0')}</span>
+                            <span className={styles.optionName}>{name}</span>
+                            {ready ? <span className={styles.optionEnd}><ChevronIcon /></span> : <span className={styles.soonTag}>Soon</span>}
+                        </button>
+                    ))}
+                </div>
             </dialog>
     </>)
 }

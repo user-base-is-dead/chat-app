@@ -43,7 +43,7 @@ fun SmoothSwitch(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) 
         animationSpec = tween(SWITCH_TIME, easing = FastOutSlowInEasing),
         label = "track",
     )
-    val track = androidx.compose.ui.graphics.lerp(SurfaceStrong, Chroma, mix)
+    val track = androidx.compose.ui.graphics.lerp(SwitchOff, Chroma, mix)
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier
@@ -66,7 +66,7 @@ fun SmoothSwitch(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) 
             modifier = Modifier
                 .offset(x = thumbX)
                 .size(SwitchThumb)
-                .shadow(2.dp, CircleShape)
+                .shadow(3.dp, CircleShape)
                 .clip(CircleShape)
                 .background(Color.White),
         )

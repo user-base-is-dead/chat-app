@@ -39,60 +39,47 @@
 }
 
 .info {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    max-width: 440px;
-    padding: 16px 18px;
-    border-radius: var(--radius-card);
-    background: var(--panel);
-    box-shadow: var(--shadow-small);
+    max-width: 620px;
+    padding-top: 18px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
     animation: rise 0.9s var(--ease-out) 0.35s backwards;
 }
 
-.badge {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    display: flex;
+.label {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--chroma) 14%, transparent);
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--chroma);
 }
 
-.badge svg {
-    width: 20px;
-    height: 20px;
+.label svg {
+    width: 14px;
+    height: 14px;
 }
 
-.infoText {
-    min-width: 0;
+.facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-top: 10px;
 }
 
-.title {
+.facts p {
     margin: 0;
-    font-family: var(--font-display);
-    font-size: 15.5px;
-    font-weight: 600;
-    color: var(--text);
-}
-
-.points {
-    margin: 6px 0 0;
-    padding: 0;
-    list-style: none;
-}
-
-.points li {
-    font-size: 13.5px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.5;
     color: var(--text-muted);
 }
 
-.points li + li {
-    margin-top: 4px;
+@media (max-width: 768px) {
+    .facts {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
 }
 
 @keyframes rise {
